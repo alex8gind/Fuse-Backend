@@ -1,0 +1,137 @@
+const User = require('../models/user.model');
+const Token = require('../models/token.model');
+
+const authRepo = {
+    getUserById: async (userId) => {
+        return await User.findOne({ userId }).exec();
+    },
+
+    getUserByPhoneOrEmail: async (phoneOrEmail) => {
+        return await User.findOne({ phoneOrEmail }).select('+password').exec();
+    },
+
+    findUserForPasswordReset: async (phoneOrEmail) => {
+        return await User.findOne({ phoneOrEmail }).select('userId phoneOrEmail').exec();
+    },
+    
+    updatePassword: async (userId, hashedPassword) => {
+        return await User.findOneAndUpdate(
+            { userId },
+            { password: hashedPassword },
+            { new: true }
+        ).exec();
+    },
+
+    getUserPassword: async (userId) => {
+        const user = await User.findOne({ userId }).select('+password').exec();
+        return user ? user.password : null;
+    },
+
+    setVerificationToken: async (userId, token, type) => {
+        const updateField = type === 'email' ? 'emailVerificationToken' : 'phoneVerificationToken';
+        return await User.findOneAndUpdate(
+            { userId },
+            { [updateField]: token },
+            { new: true }
+        ).exec();
+    },
+
+    verifyEmailOrPhone: async (userId, type) => {
+        const updateField = type === 'email' ? 'isEmailVerified' : 'isPhoneVerified';
+        const tokenField = type === 'email' ? 'emailVerificationToken' : 'phoneVerificationToken';
+        return await User.findOneAndUpdate(
+            { userId },
+            { [updateField]: true, [tokenField]: null },
+            { new: true }
+        ).exec();
+    },
+
+    changePhoneOrEmail: async (userId, newPhoneOrEmail) => {
+        return await User.findOneAndUpdate(
+            { userId },
+            { 
+                phoneOrEmail: newPhoneOrEmail, 
+                isEmailVerified: false, 
+                isPhoneVerified: false 
+            },
+            { new: true }
+        ).exec();
+    },
+
+    updateLoginAttempts: async (userId, attempts) => {
+        return await User.findOneAndUpdate(
+            { userId },
+            { loginAttempts: attempts },
+            { new: true }
+        ).exec();
+    },
+
+    lockAccount: async (userId, lockUntil) => {
+        return await User.findOneAndUpdate(
+            { userId },
+            { lockUntil },
+            { new: true }
+        ).exec();
+    },
+
+    checkAccountLock: async (userId) => {
+        const user = await User.findOne({ userId }).select('lockUntil').exec();
+        return user ? user.lockUntil : null;
+    },
+
+    setResetPasswordToken: async (userId, token, expires) => {
+        return await User.findOneAndUpdate(
+            { userId },
+            { resetPasswordToken: token, resetPasswordExpires: expires },
+            { new: true }
+        ).exec();
+    },
+
+    clearResetPasswordToken: async (userId) => {
+        return await User.findOneAndUpdate(
+            { userId },
+            { resetPasswordToken: null, resetPasswordExpires: null },
+            { new: true }
+        ).exec();
+    },
+
+    saveRefreshToken: async (userId, refreshToken) => {
+        const token = new Token({ userId, token: refreshToken });
+        return await token.save();
+    },
+
+    findUserByRefreshToken: async (refreshToken) => {
+        const token = await Token.findOne({ token: refreshToken });
+        if (!token) return null;
+        return await User.findOne({ userId: token.userId });
+    },
+
+    removeRefreshToken: async (userId, refreshToken) => {
+        return await Token.findOneAndDelete({ userId, token: refreshToken });
+    },
+
+    getUserVerificationStatus: async (userId) => {
+        const user = await User.findOne({ userId }).select('isEmailVerified isPhoneVerified isVerified').exec();
+        return user ? {
+            isEmailVerified: user.isEmailVerified,
+            isPhoneVerified: user.isPhoneVerified,
+            isVerified: user.isVerified
+        } : null;
+    },
+
+    checkVerificationToken: async (userId, token, type) => {
+        const tokenField = type === 'email' ? 'emailVerificationToken' : 'phoneVerificationToken';
+        const user = await User.findOne({ userId, [tokenField]: token }).exec();
+        return !!user;
+    },
+
+    getAllRefreshTokens: async (userId) => {
+        return await Token.find({ userId }).exec();
+    },
+
+    removeAllRefreshTokens: async (userId) => {
+        return await Token.deleteMany({ userId });
+    }
+};
+
+module.exports = authRepo;
