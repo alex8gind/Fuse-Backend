@@ -1,5 +1,5 @@
 const authService = require('../services/auth.service');
-const userController = require('./userController');
+const userController = require('./user.controller');
 const { generateToken } = require('../services/auth.service');
 
 

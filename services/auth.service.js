@@ -1,7 +1,7 @@
-const authRepo = require('./auth.repo');
+const authRepo = require('../repositories/auth.repo');
 const { hashPassword, comparePassword } = require('./password.service');
 const { v4: uuidv4 } = require('uuid');
-const notificationService = require('./notificationService');
+const { sendWithPhoneOrEmail } = require('./phoneOrEmail.service');
 const jwt = require('jsonwebtoken');
 
 const generateVerificationToken = () => uuidv4();
@@ -147,20 +147,29 @@ const authService = {
     requestEmailVerification: async (userId) => {
         const user = await authRepo.getUserById(userId);
         if (!user) throw new Error('User not found');
-        validatePhoneOrEmail(user.phoneOrEmail);
         const verificationToken = generateVerificationToken();
         await authRepo.setVerificationToken(userId, verificationToken, 'email');
-        await notificationService.sendNotification(user.phoneOrEmail, verificationToken, 'verification', 'email');
+        await sendWithPhoneOrEmail(
+            user.phoneOrEmail,
+            verificationToken,
+            'verification',
+            'email'
+        );
     },
 
     requestPhoneVerification: async (userId) => {
         const user = await authRepo.getUserById(userId);
         if (!user) throw new Error('User not found');
-        validatePhoneOrEmail(user.phoneOrEmail);
         const verificationToken = generateVerificationToken();
         await authRepo.setVerificationToken(userId, verificationToken, 'phone');
-        await notificationService.sendNotification(user.phoneOrEmail, verificationToken, 'verification', 'sms');
+        await sendWithPhoneOrEmail(
+            user.phoneOrEmail,
+            verificationToken,
+            'verification',
+            'sms'
+        );
     },
+
 
     verifyEmail: async (userId, token) => {
         const isValid = await authRepo.checkVerificationToken(userId, token, 'email');
@@ -179,14 +188,19 @@ const authService = {
     },
 
     forgotPassword: async (phoneOrEmail) => {
-        validatePhoneOrEmail(phoneOrEmail);
         const user = await authRepo.findUserForPasswordReset(phoneOrEmail);
         if (!user) throw new Error('User not found');
         const resetToken = generateVerificationToken();
         const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
         await authRepo.setResetPasswordToken(user.userId, resetToken, resetTokenExpiry);
-        await notificationService.sendNotification(phoneOrEmail, resetToken, 'passwordReset', phoneOrEmail.includes('@') ? 'email' : 'sms');
+        await sendWithPhoneOrEmail(
+            phoneOrEmail,
+            resetToken,
+            'passwordReset',
+            phoneOrEmail.includes('@') ? 'email' : 'sms'
+        );
     },
+
 
     resetPassword: async (userId, token, newPassword) => {
         const user = await authRepo.getUserById(userId);

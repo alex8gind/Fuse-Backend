@@ -1,4 +1,4 @@
-const userRepo = require('./user.repo');
+const userRepo = require('../repositories/user.repo');
 const { sendWithPhoneOrEmail } = require('./phoneOrEmail.service');
 const { hashPassword } = require('./password.service');
 

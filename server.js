@@ -7,7 +7,10 @@ const connectDB = require('./config/db');
 const errorHandler = require('./middleware/error.middleware');
 
 // Connect to DB:
-connectDB();
+connectDB().catch((error)=>{
+  console.error(`Error: ${error.message}`);
+  process.exit(1); // Exit process with failure
+})
 
 // Middlewares:
 app.use(cors());
