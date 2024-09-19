@@ -1,10 +1,14 @@
 const authRepo = require('../repositories/auth.repo');
 const { hashPassword, comparePassword } = require('./password.service');
 const { v4: uuidv4 } = require('uuid');
+const userService = require('./user.service');
 const { sendWithPhoneOrEmail } = require('./phoneOrEmail.service');
 const jwt = require('jsonwebtoken');
+const { MAX_LOGIN_ATTEMPTS, LOCK_TIME } = require('../config/constants');
 
 const generateVerificationToken = () => uuidv4();
+// console.log('ACCESS_TOKEN_SECRET:', process.env.ACCESS_TOKEN_SECRET);
+// console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET);
 
 const validatePassword = (password) => {
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).*$/;
@@ -23,41 +27,63 @@ const validatePhoneOrEmail = (phoneOrEmail) => {
 };
 
 const generateTokens = (userId) => {
+    if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+        throw new Error('Token secrets are not set in environment variables');
+    }
     const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
     return { accessToken, refreshToken };
 };
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_TIME = 15 * 60 * 1000; // 15 minutes
 
 const authService = {
 
     register: async (userData) => {
-        const { password, ...otherUserData } = userData;
-        const hashedPassword = await hashPassword(password);
-        const newUser = await userService.userFunctions.createUser({
-          ...otherUserData,
-          password: hashedPassword
-        });
-        const { accessToken, refreshToken } = generateTokens(newUser.userId);
-        await authRepo.saveRefreshToken(newUser.userId, refreshToken);
-        return { user: newUser, accessToken, refreshToken };
-    },
+        try {
+          console.log('Registration userData:', userData);
+          const { password, ...otherUserData } = userData;
+          validatePassword(password);
+          validatePhoneOrEmail(otherUserData.phoneOrEmail);
+          const hashedPassword = await hashPassword(password);
+          const newUser = await userService.userFunctions.createUser({
+            ...otherUserData,
+            password: hashedPassword
+          });
+          const { accessToken, refreshToken } = generateTokens(newUser.userId);
+          await authRepo.saveRefreshToken(newUser.userId, refreshToken);
+          return { user: newUser, accessToken, refreshToken };
+        } catch (error) {
+          console.error('Registration error in service:', error);
+          throw error;
+        }
+      },
 
-    login: async (phoneOrEmail, password) => {
-        validatePhoneOrEmail(phoneOrEmail);
+      login: async (phoneOrEmail, password) => {
+        // Input validation
+        if (!phoneOrEmail || !password) {
+            throw new Error('Phone/Email and password are required');
+        }
+    
+        // Validate phone or email format
+        try {
+            validatePhoneOrEmail(phoneOrEmail);
+        } catch (error) {
+            throw new Error('Invalid phone number or email format');
+        }
+    
+        // Check if user exists
         const user = await authRepo.getUserByPhoneOrEmail(phoneOrEmail);
         if (!user) {
             throw new Error('User not found');
         }
-
+    
         // Check if account is locked
         const lockUntil = await authRepo.checkAccountLock(user.userId);
         if (lockUntil && lockUntil > Date.now()) {
             throw new Error('Account is locked. Please try again later.');
         }
-
+    
+        // Validate password
         const isPasswordValid = await comparePassword(password, user.password);
         if (!isPasswordValid) {
             const attempts = (user.loginAttempts || 0) + 1;
@@ -68,16 +94,19 @@ const authService = {
             await authRepo.updateLoginAttempts(user.userId, attempts);
             throw new Error('Invalid password');
         }
-
-        if (!user.isEmailVerified && !user.isPhoneVerified) {
+    
+        // Check if account is verified
+        if (!user.isVerified) {
             throw new Error('Account not verified');
         }
-
+    
         // Reset login attempts on successful login
         await authRepo.updateLoginAttempts(user.userId, 0);
-
+    
+        // Generate tokens
         const { accessToken, refreshToken } = generateTokens(user.userId);
         await authRepo.saveRefreshToken(user.userId, refreshToken);
+    
         return { 
             userId: user.userId, 
             accessToken, 

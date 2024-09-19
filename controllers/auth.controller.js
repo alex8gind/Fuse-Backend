@@ -7,28 +7,50 @@ const authController = {
 
     register: async (req, res, next) => {
         try {
-            const { user, accessToken, refreshToken } = await authService.register(req.body);
-            res.status(201).json({
-              message: 'User registered successfully',
-              user,
-              accessToken,
-              refreshToken
-            });
-          } catch (error) {
-            if (error.code === 11000) {
-              return res.status(409).json({ message: 'User already exists' });
-            }
-            next(error);
+          const { user, accessToken, refreshToken } = await authService.register(req.body);
+          res.status(201).json({
+            message: 'User registered successfully',
+            user,
+            accessToken,
+            refreshToken
+          });
+        } catch (error) {
+          console.error('Registration error in controller:', error);
+          if (error.code === 11000) {
+            return res.status(409).json({ error: 'User already exists. Please use a different email or phone number.' });
           }
-        },
+          res.status(400).json({ error: error.message || 'An error occurred during registration' });
+        }
+      },
 
-    login: async (req, res, next) => {
+      login: async (req, res, next) => {
         try {
             const { phoneOrEmail, password } = req.body;
             const result = await authService.login(phoneOrEmail, password);
             res.json(result);
         } catch (error) {
-            next(error);
+            console.error('Login error:', error);
+            switch(error.message) {
+                case 'Phone/Email and password are required':
+                case 'Invalid phone number or email format':
+                    res.status(400).json({ error: error.message });
+                    break;
+                case 'User not found':
+                    res.status(404).json({ error: error.message });
+                    break;
+                case 'Invalid password':
+                    res.status(401).json({ error: error.message });
+                    break;
+                case 'Account is locked. Please try again later.':
+                case 'Too many failed attempts. Account is locked for 15 minutes.':
+                    res.status(423).json({ error: error.message });
+                    break;
+                case 'Account not verified':
+                    res.status(403).json({ error: error.message });
+                    break;
+                default:
+                    res.status(500).json({ error: 'An unexpected error occurred' });
+            }
         }
     },
 
