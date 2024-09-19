@@ -13,8 +13,8 @@ const emailTransporter = nodemailer.createTransport({
 });
 
 // SMS configuration (using Twilio)
-// const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-const twilioClient = twilio('AC1234567890abcdef1234567890abcdef', 'your_auth_token_here');
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
 const sendEmail = async (to, subject, text) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
