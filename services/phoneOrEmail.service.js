@@ -15,12 +15,12 @@ const emailTransporter = nodemailer.createTransport({
 // SMS configuration (using Twilio)
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-const sendEmail = async (to, subject, text) => {
+const sendEmail = async (to, subject, html) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to,
         subject,
-        text
+        html
     };
 
     await emailTransporter.sendMail(mailOptions);
@@ -35,7 +35,9 @@ const sendSMS = async (to, body) => {
 };
 
 const sendVerificationEmail = async (to, token) => {
-    await sendEmail(to, 'Email Verification', `Your verification token is: ${token}`);
+    await sendEmail(to, 'Email Verification',
+        `<p>Please click the following link to verify your email:</p>
+         <a href="${process.env.FRONTEND_URL}/verify/${token}">Verify Email</a>`);
 };
 
 const sendPasswordResetEmail = async (to, token) => {

@@ -96,10 +96,7 @@ const authService = {
             throw new Error('Invalid password');
         }
     
-        // Check if account is verified
-        if (!user.isVerified) {
-            throw new Error('Account not verified');
-        }
+    
     
         // Reset login attempts on successful login
         await authRepo.updateLoginAttempts(user.userId, 0);
@@ -108,6 +105,7 @@ const authService = {
         const { accessToken, refreshToken } = generateTokens(user.userId);
         await authRepo.saveRefreshToken(user.userId, refreshToken);
         delete user.password;
+
         
         return { 
             user, 
@@ -188,6 +186,14 @@ const authService = {
         );
     },
 
+    verifyEmail: async (userId, token) => {
+        const isValid = await authRepo.checkVerificationToken(userId, token, 'email');
+        if (!isValid) {
+            throw new Error('Invalid verification token');
+        }
+        return await authRepo.verifyEmailOrPhone(userId, 'email');
+    },
+
     requestPhoneVerification: async (userId) => {
         const user = await authRepo.getUserById(userId);
         if (!user) throw new Error('User not found');
@@ -199,15 +205,6 @@ const authService = {
             'verification',
             'sms'
         );
-    },
-
-
-    verifyEmail: async (userId, token) => {
-        const isValid = await authRepo.checkVerificationToken(userId, token, 'email');
-        if (!isValid) {
-            throw new Error('Invalid verification token');
-        }
-        return await authRepo.verifyEmailOrPhone(userId, 'email');
     },
 
     verifyPhone: async (userId, token) => {

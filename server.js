@@ -27,8 +27,8 @@ const userRoutes = require('./routes/user.routes');
 const apiRouter = express.Router();
 
 // Use Routes with API prefix:
-apiRouter.use(userRoutes);
 apiRouter.use(authRoutes);
+apiRouter.use(userRoutes);
 
 // Apply API router to app
 app.use('/api', apiRouter);

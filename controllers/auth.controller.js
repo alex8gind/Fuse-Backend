@@ -94,7 +94,7 @@ const authController = {
         }
     },
 
-    requestEmailVerification: async (req, res, next) => {
+    sendVerificationEmail: async (req, res, next) => {
         try {
             const { userId } = req.user;
             await authService.requestEmailVerification(userId);

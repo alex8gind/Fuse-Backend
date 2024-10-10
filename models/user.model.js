@@ -79,6 +79,7 @@ const userSchema = new mongoose.Schema({
     profilePicture: { type: String, default: 'default.png' },
     documents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     connections: [{ type: String, ref: 'User' }],
+    isAccountVerified: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },

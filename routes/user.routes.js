@@ -5,11 +5,12 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 const { checkUserAuthorization } = require('../middleware/userAuth.middleware');
 const isAdmin = require('../middleware/isAdmin.middleware');
 const { upload, uploadFile } = require('../controllers/upload.controller');
-
+const {isAccountVerifiedMiddleware} = require('../middleware/verified.middleware');
 
 
 // Protected routes
-// router.use(authMiddleware);
+router.use(authMiddleware);
+router.use(isAccountVerifiedMiddleware);
 
 router.get('/profile', userController.getUserProfile);
 router.put('/profile', checkUserAuthorization, userController.editUser);
@@ -20,7 +21,6 @@ router.post('/unblock/:targetUserId', userController.unblockUser);
 router.post('/deactivate', userController.deactivateAccount);
 router.post('/reactivate', userController.reactivateAccount);
 router.post('/upload-document', authMiddleware, upload.single('file'), uploadFile);
-
 
 
 // Admin routes
