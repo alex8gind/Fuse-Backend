@@ -4,13 +4,13 @@ const userController = {
 
     getUserProfile: async (req, res, next) => {
         try {
-          const userId = req.user.userId; // Assuming the user ID is attached to the request by the auth middleware
-          const user = await userService.getUserProfile(userId);
-          res.json(user);
+            const userId = req.user.userId; // Assuming the user ID is attached to the request by the auth middleware
+            const user = await userService.getUserProfile(userId);
+            res.json({ user });
         } catch (error) {
-          next(error);
+            next(error);
         }
-      },
+    },
 
     editUser: async (req, res, next) => {
         try {

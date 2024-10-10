@@ -7,7 +7,12 @@ const authRepo = {
     },
 
     getUserByPhoneOrEmail: async (phoneOrEmail) => {
-        return await User.findOne({ phoneOrEmail }).select('+password').exec();
+        const result =  await User.findOne({ phoneOrEmail })
+        .select('-verificationToken -resetPasswordExpires -loginAttempts -lockUntil')
+        .exec(); 
+        if(!result) return null;
+        
+        return result.toObject();
     },
 
     findUserForPasswordReset: async (phoneOrEmail) => {

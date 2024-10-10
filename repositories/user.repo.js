@@ -11,7 +11,11 @@ const userRepo = {
     },
 
     getUserById: async (userId) => {
-        return await User.findOne({ userId }).exec();
+        const result =  await User.findOne({ userId })
+        .select('-verificationToken -resetPasswordExpires -loginAttempts -lockUntil -password')
+        .exec(); 
+
+        return result.toObject();
     },
 
     getAllUsers: async (skip, limit, sortField = 'createdAt', sortOrder = 'desc', filter = {}) => {

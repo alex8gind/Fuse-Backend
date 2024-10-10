@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
-const { authenticateToken } = require('../middleware/auth.middleware');
+const { authMiddleware } = require('../middleware/auth.middleware');
 
 // Public routes
 router.post('/register', authController.register);
@@ -11,7 +11,7 @@ router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 
 // Protected routes
-router.use(authenticateToken);
+// router.use(authMiddleware);
 
 router.post('/logout', authController.logout);
 router.post('/change-password', authController.changePassword);

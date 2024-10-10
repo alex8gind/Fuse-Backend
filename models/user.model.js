@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
+const { getNextPId } = require('./counter');
 
 const userSchema = new mongoose.Schema({
 
@@ -9,6 +10,14 @@ const userSchema = new mongoose.Schema({
         default: () => `user_${uuidv4()}`,
         required: true,
         immutable: true
+    },
+
+    PId: {
+        type: String,
+        unique: true,
+        required: true,
+        immutable: true,
+        default: 0
     },
 
     firstName: { 
@@ -65,21 +74,21 @@ const userSchema = new mongoose.Schema({
     password: { 
         type: String, 
         required: [true, 'Password is required']
-    },
+    },//
     
-    profilePicture: { type: String },
+    profilePicture: { type: String, default: 'default.png' },
     documents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     connections: [{ type: String, ref: 'User' }],
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
-    isBlocked: { type: Boolean, default: false },
-    verificationToken: { type: String },
-    resetPasswordToken: { type: String },
-    resetPasswordExpires: { type: Date },
+    blockedUsers: [{ type: String, ref: 'User' }],
+    verificationToken: { type: String },//
+    resetPasswordToken: { type: String },//
+    resetPasswordExpires: { type: Date },//
     lastLogin: { type: Date },
-    loginAttempts: { type: Number, default: 0 },
-    lockUntil: { type: Date }
+    loginAttempts: { type: Number, default: 0 },//
+    lockUntil: { type: Date }//
 }, { 
     timestamps: true,
     toJSON: { virtuals: true },
@@ -93,6 +102,14 @@ userSchema.virtual('fullName').get(function() {
 
 // Index for faster queries
 userSchema.index({ email: 1, phoneNumber: 1 });
+
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('PId')) {
+        const PId = await getNextPId();
+        this.PId = PId;
+    }
+    next();
+});
 
 const User = mongoose.model('User', userSchema);
 

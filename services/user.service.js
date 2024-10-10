@@ -5,21 +5,16 @@ const { hashPassword } = require('./password.service');
 
 const userFunctions = {
     createUser: async (userData) => {
-        if (userData.password) {
-            userData.password = await hashPassword(userData.password);
-        }
         return await userRepo.createUser(userData);
     },
 
     getUserProfile: async (userId) => {
         const user = await userRepo.getUserById(userId);
         if (!user) {
-          throw new Error('User not found');
+            throw new Error('User not found');
         }
-        // Remove sensitive information
-        const { password, ...userProfile } = user.toObject();
-        return userProfile;
-      },
+        return user;
+    },
 
     editUser: async (userId, updateData) => {
         const { password, isAdmin, isActive, isBlocked, ...safeUpdateData } = updateData;

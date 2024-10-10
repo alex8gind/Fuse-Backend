@@ -1,29 +1,38 @@
 const authService = require('../services/auth.service');
-const userController = require('./user.controller');
-const { generateToken } = require('../services/auth.service');
 
 
 const authController = {
-
-    register: async (req, res, next) => {
+    register: async (req, res) => {
+        console.log("TRIGGERED");
         try {
-          const { user, accessToken, refreshToken } = await authService.register(req.body);
-          res.status(201).json({
-            message: 'User registered successfully',
-            user,
-            accessToken,
-            refreshToken
-          });
+            const { user, accessToken, refreshToken } = await authService.register(req.body);
+            res.status(201).json({
+                message: 'User registered successfully',
+                user: {
+                    userId: user.userId,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    phoneOrEmail: user.phoneOrEmail,
+                    DateOfBirth: user.DateOfBirth,
+                    gender: user.gender,
+                    isVerified: user.isVerified,
+                    isAdmin: user.isAdmin,
+                    isActive: user.isActive
+                },
+                accessToken,
+                refreshToken
+            });
         } catch (error) {
-          console.error('Registration error in controller:', error);
-          if (error.code === 11000) {
-            return res.status(409).json({ error: 'User already exists. Please use a different email or phone number.' });
-          }
-          res.status(400).json({ error: error.message || 'An error occurred during registration' });
+            console.error('Registration error in controller:', error);
+            if (error.code === 11000) {
+                return res.status(409).json({ error: 'User already exists. Please use a different email or phone number.' });
+            }
+            res.status(400).json({ error: error.message || 'An error occurred during registration' });
         }
-      },
+    },
 
-      login: async (req, res, next) => {
+    login: async (req, res) => {
+        console.log("CREDENTIALS:", req.body);
         try {
             const { phoneOrEmail, password } = req.body;
             const result = await authService.login(phoneOrEmail, password);
@@ -74,7 +83,6 @@ const authController = {
             next(error);
         }
     },
-
     changePassword: async (req, res, next) => {
         try {
             const { userId } = req.user;

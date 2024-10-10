@@ -1,8 +1,9 @@
 const User = require('../models/user.model');
+const { getUserById } = require('../repositories/user.repo');
 
 const isAdmin = async (req, res, next) => {
   try {
-    const user = await User.findOne({ userId: req.user.userId });
+    const user = await getUserById(req.user.userId);
     if (user && user.isAdmin) {
       next();
     } else {

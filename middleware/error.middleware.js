@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken');
 
 const errorHandler = (err, req, res, next) => {
     console.error(err);
@@ -5,7 +6,13 @@ const errorHandler = (err, req, res, next) => {
     let statusCode = 500;
     let message = 'Internal Server Error';
 
-    if (err.name === 'ValidationError') {
+    if (err instanceof jwt.JsonWebTokenError) {
+        statusCode = 401;
+        message = 'Invalid token';
+    } else if (err instanceof jwt.TokenExpiredError) {
+        statusCode = 401;
+        message = 'Token expired';
+    } else if (err.name === 'ValidationError') {
         // Mongoose validation error
         statusCode = 400;
         message = Object.values(err.errors).map(error => error.message).join(', ');

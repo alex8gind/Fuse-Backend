@@ -85,6 +85,7 @@ const authService = {
     
         // Validate password
         const isPasswordValid = await comparePassword(password, user.password);
+        console.log("isPASSWORDVALID: ", isPasswordValid);
         if (!isPasswordValid) {
             const attempts = (user.loginAttempts || 0) + 1;
             if (attempts >= MAX_LOGIN_ATTEMPTS) {
@@ -106,9 +107,10 @@ const authService = {
         // Generate tokens
         const { accessToken, refreshToken } = generateTokens(user.userId);
         await authRepo.saveRefreshToken(user.userId, refreshToken);
-    
+        delete user.password;
+        
         return { 
-            userId: user.userId, 
+            user, 
             accessToken, 
             refreshToken 
         };

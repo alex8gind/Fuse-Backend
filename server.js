@@ -13,7 +13,10 @@ connectDB().catch((error)=>{
 })
 
 // Middlewares:
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 
 // Import Routes:
@@ -24,8 +27,8 @@ const userRoutes = require('./routes/user.routes');
 const apiRouter = express.Router();
 
 // Use Routes with API prefix:
-apiRouter.use('/auth', authRoutes);
-apiRouter.use('/users', userRoutes);
+apiRouter.use(userRoutes);
+apiRouter.use(authRoutes);
 
 // Apply API router to app
 app.use('/api', apiRouter);

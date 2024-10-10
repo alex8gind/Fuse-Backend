@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const connectionSchema = new mongoose.Schema({
     sender: {type:String, ref:'User', required:true},
     receiver: {type:String, ref:'User', required:true},
-    status: {type:String, enum: ['pending', 'accepted', 'declined'], default:'pending'}
+    status: {type:String, enum: ['pending', 'accepted', 'declined'], default:'pending'},
+    
 }, {timestamps:true})
 
 
