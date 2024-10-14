@@ -3,7 +3,9 @@ const Token = require('../models/token.model');
 
 const authRepo = {
     getUserById: async (userId) => {
-        return await User.findOne({ userId }).exec();
+        return await User.findOne({ userId })
+        .select('-verificationToken -resetPasswordExpires -loginAttempts -lockUntil -password')
+        .exec();
     },
 
     getUserByPhoneOrEmail: async (phoneOrEmail) => {
@@ -108,7 +110,9 @@ const authRepo = {
     findUserByRefreshToken: async (refreshToken) => {
         const token = await Token.findOne({ token: refreshToken });
         if (!token) return null;
-        return await User.findOne({ userId: token.userId });
+        return await User.findOne({ userId: token.userId })
+        .select('-verificationToken -resetPasswordExpires -loginAttempts -lockUntil -password')
+        .exec();
     },
 
     removeRefreshToken: async (userId, refreshToken) => {

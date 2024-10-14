@@ -96,8 +96,6 @@ const authService = {
             throw new Error('Invalid password');
         }
     
-    
-    
         // Reset login attempts on successful login
         await authRepo.updateLoginAttempts(user.userId, 0);
     
@@ -138,14 +136,14 @@ const authService = {
     refreshToken: async (refreshToken) => {
         try {
             const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-            const user = await authRepo.findUserByRefreshToken(refreshToken);
+            const user = await authRepo.getUserById(payload.userId);
             if (!user) {
                 throw new Error('Invalid refresh token');
             }
             const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.userId);
             await authRepo.removeRefreshToken(user.userId, refreshToken);
             await authRepo.saveRefreshToken(user.userId, newRefreshToken);
-            return { accessToken, refreshToken: newRefreshToken };
+            return { accessToken, refreshToken: newRefreshToken, user };
         } catch (error) {
             throw new Error('Invalid refresh token');
         }
