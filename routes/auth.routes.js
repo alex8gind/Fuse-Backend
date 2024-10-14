@@ -16,7 +16,7 @@ router.post('/reset-password', authController.resetPassword);
 router.use(authMiddleware);
 
 router.post('/logout', authController.logout);
-router.post('/verify-email', authController.sendVerificationEmail);//trigered by account registration in front end
+router.post('/verify-email', authController.sendVerificationEmail);//triggered by account registration in front end
 router.get('/refresh-tokens', authController.getAllRefreshTokens);
 router.delete('/refresh-tokens', authController.removeAllRefreshTokens);
 

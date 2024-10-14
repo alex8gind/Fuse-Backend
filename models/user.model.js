@@ -79,7 +79,7 @@ const userSchema = new mongoose.Schema({
     profilePicture: { type: String, default: 'default.png' },
     documents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
     connections: [{ type: String, ref: 'User' }],
-    isAccountVerified: { type: Boolean, default: false },
+    isPhoneOrEmailVerified: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
@@ -87,6 +87,8 @@ const userSchema = new mongoose.Schema({
     verificationToken: { type: String },//
     resetPasswordToken: { type: String },//
     resetPasswordExpires: { type: Date },//
+    emailVerificationToken: { type: String },//
+    phoneVerificationToken: { type: String },//
     lastLogin: { type: Date },
     loginAttempts: { type: Number, default: 0 },//
     lockUntil: { type: Date }//

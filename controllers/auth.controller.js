@@ -95,6 +95,7 @@ const authController = {
     },
 
     sendVerificationEmail: async (req, res, next) => {
+        console.log("BACKEND JUST SENT VERIFICATION EMAIL");
         try {
             const { userId } = req.user;
             await authService.requestEmailVerification(userId);
@@ -106,10 +107,9 @@ const authController = {
 
     verifyEmail: async (req, res, next) => {
         try {
-            const { userId } = req.user;
-            const { token } = req.body;
-            await authService.verifyEmail(userId, token);
-            res.json({ message: 'Email verified successfully' });
+            const { token } = req.params;
+            const user = await authService.verifyEmail(token);
+            res.json({ message: 'Email verified successfully', isPhoneOrEmailVerified: user.isPhoneOrEmailVerified });
         } catch (error) {
             next(error);
         }

@@ -184,12 +184,16 @@ const authService = {
         );
     },
 
-    verifyEmail: async (userId, token) => {
-        const isValid = await authRepo.checkVerificationToken(userId, token, 'email');
-        if (!isValid) {
-            throw new Error('Invalid verification token');
+    verifyEmail: async (token) => {
+        const user = await authRepo.getUserByVerificationToken(token);
+        if (!user) {
+            throw new Error('Invalid verification token:: user not found');
         }
-        return await authRepo.verifyEmailOrPhone(userId, 'email');
+        const isValid = await authRepo.checkVerificationToken(user.userId, token, 'email');
+        if (!isValid) {
+            throw new Error('Invalid verification token:: isValid failed');
+        }
+        return await authRepo.verifyEmailOrPhone(user.userId, 'email');
     },
 
     requestPhoneVerification: async (userId) => {

@@ -48,7 +48,10 @@ const authRepo = {
         const tokenField = type === 'email' ? 'emailVerificationToken' : 'phoneVerificationToken';
         return await User.findOneAndUpdate(
             { userId },
-            { [updateField]: true, [tokenField]: null },
+            {[updateField]: true,
+            [tokenField]: null,
+            isPhoneOrEmailVerified: true
+            },
             { new: true }
         ).exec();
     },
@@ -128,12 +131,17 @@ const authRepo = {
         } : null;
     },
 
+    getUserByVerificationToken: async (token) => {
+        console.log('tocken from email: ', token);
+        return await User.findOne({ emailVerificationToken: token }).exec();
+    },
+
     checkVerificationToken: async (userId, token, type) => {
         const tokenField = type === 'email' ? 'emailVerificationToken' : 'phoneVerificationToken';
         const user = await User.findOne({ userId, [tokenField]: token }).exec();
-        return !!user;
+        return user;
     },
-
+    
     getAllRefreshTokens: async (userId) => {
         return await Token.find({ userId }).exec();
     },
