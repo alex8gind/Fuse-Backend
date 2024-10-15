@@ -57,6 +57,7 @@ const authController = {
                 case 'Account not verified':
                     res.status(403).json({ error: error.message });
                     break;
+                
                 default:
                     res.status(500).json({ error: 'An unexpected error occurred' });
             }
@@ -101,6 +102,9 @@ const authController = {
             await authService.requestEmailVerification(userId);
             res.json({ message: 'Email verification sent' });
         } catch (error) {
+            if (error.message?.toLowerCase().includes('verification email has already been sent')) {
+                return res.status(400).json({ error: error.message, reason: 'Verification email has already been sent' });
+            }
             next(error);
         }
     },
@@ -109,6 +113,9 @@ const authController = {
         try {
             const { token } = req.params;
             const user = await authService.verifyEmail(token);
+            if (user.message === 'Email already verified') {
+                return res.status(200).json({ message: user.message, isPhoneOrEmailVerified: user.isPhoneOrEmailVerified });
+            }
             res.json({ message: 'Email verified successfully', isPhoneOrEmailVerified: user.isPhoneOrEmailVerified });
         } catch (error) {
             next(error);

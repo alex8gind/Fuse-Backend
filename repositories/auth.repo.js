@@ -45,11 +45,10 @@ const authRepo = {
 
     verifyEmailOrPhone: async (userId, type) => {
         const updateField = type === 'email' ? 'isEmailVerified' : 'isPhoneVerified';
-        const tokenField = type === 'email' ? 'emailVerificationToken' : 'phoneVerificationToken';
+
         return await User.findOneAndUpdate(
             { userId },
             {[updateField]: true,
-            [tokenField]: null,
             isPhoneOrEmailVerified: true
             },
             { new: true }
@@ -123,11 +122,10 @@ const authRepo = {
     },
 
     getUserVerificationStatus: async (userId) => {
-        const user = await User.findOne({ userId }).select('isEmailVerified isPhoneVerified isVerified').exec();
+        const user = await User.findOne({ userId }).select('emailVerificationToken isPhoneOrEmailVerified').exec();
         return user ? {
-            isEmailVerified: user.isEmailVerified,
-            isPhoneVerified: user.isPhoneVerified,
-            isVerified: user.isVerified
+            hasVerificationToken: !!user.emailVerificationToken,
+            isVerified: user.isPhoneOrEmailVerified
         } : null;
     },
 

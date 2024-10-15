@@ -49,9 +49,8 @@ const authService = {
             ...otherUserData,
             password: hashedPassword
           });
-          const { accessToken, refreshToken } = generateTokens(newUser.userId);
-          await authRepo.saveRefreshToken(newUser.userId, refreshToken);
-          return { user: newUser, accessToken, refreshToken };
+          const { accessToken } = generateTokens(newUser.userId);
+          return { user: newUser, accessToken };
         } catch (error) {
           console.error('Registration error in service:', error);
           throw error;
@@ -101,6 +100,10 @@ const authService = {
     
         // Generate tokens
         const { accessToken, refreshToken } = generateTokens(user.userId);
+          // Check if PhoneOrEmail is Verified
+          if (!user.isPhoneOrEmailVerified) {
+            return { user, accessToken };
+        }
         await authRepo.saveRefreshToken(user.userId, refreshToken);
         delete user.password;
 
@@ -174,6 +177,17 @@ const authService = {
     requestEmailVerification: async (userId) => {
         const user = await authRepo.getUserById(userId);
         if (!user) throw new Error('User not found');
+
+        const verificationStatus = await authRepo.getUserVerificationStatus(userId);
+
+        if (verificationStatus.isVerified) {
+            throw new Error('User is already verified.');
+        }
+    
+        if (verificationStatus.hasVerificationToken) {
+            throw new Error('Verification email has already been sent. Please check your email or request a new one.');
+        }
+
         const verificationToken = generateVerificationToken();
         await authRepo.setVerificationToken(userId, verificationToken, 'email');
         await sendWithPhoneOrEmail(
@@ -189,11 +203,15 @@ const authService = {
         if (!user) {
             throw new Error('Invalid verification token:: user not found');
         }
+        if (user.isPhoneOrEmailVerified) {
+            return { message: 'Email already verified', isPhoneOrEmailVerified: true };
+        }
         const isValid = await authRepo.checkVerificationToken(user.userId, token, 'email');
         if (!isValid) {
             throw new Error('Invalid verification token:: isValid failed');
         }
-        return await authRepo.verifyEmailOrPhone(user.userId, 'email');
+        const updatedUser = await authRepo.verifyEmailOrPhone(user.userId, 'email');
+        return { message: 'Email verified successfully', isPhoneOrEmailVerified: updatedUser.isPhoneOrEmailVerified };
     },
 
     requestPhoneVerification: async (userId) => {
