@@ -122,11 +122,20 @@ const authRepo = {
     },
 
     getUserVerificationStatus: async (userId) => {
-        const user = await User.findOne({ userId }).select('emailVerificationToken isPhoneOrEmailVerified').exec();
+        const user = await User.findOne({ userId }).select('isPhoneOrEmailVerified emailVerificationToken lastVerificationSentAt').exec();
         return user ? {
+            isVerified: user.isPhoneOrEmailVerified,
             hasVerificationToken: !!user.emailVerificationToken,
-            isVerified: user.isPhoneOrEmailVerified
+            lastVerificationSentAt: user.lastVerificationSentAt
         } : null;
+    },
+    
+    updateLastVerificationSent: async (userId) => {
+        return await User.findOneAndUpdate(
+            { userId },
+            { lastVerificationSentAt: Date.now() },
+            { new: true }
+        ).exec();
     },
 
     getUserByVerificationToken: async (token) => {

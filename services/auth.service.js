@@ -184,18 +184,23 @@ const authService = {
             throw new Error('User is already verified.');
         }
     
-        if (verificationStatus.hasVerificationToken) {
-            throw new Error('Verification email has already been sent. Please check your email or request a new one.');
-        }
+         // Check if a verification email was sent recently
+        const cooldownPeriod = 2 * 60 * 1000; // 2 minutes in milliseconds
+        if (verificationStatus.lastVerificationSentAt && 
+        Date.now() - verificationStatus.lastVerificationSentAt < cooldownPeriod) {
+        throw new Error('Please wait before requesting another verification email.');
+    }
 
         const verificationToken = generateVerificationToken();
         await authRepo.setVerificationToken(userId, verificationToken, 'email');
+        await authRepo.updateLastVerificationSent(userId);
         await sendWithPhoneOrEmail(
             user.phoneOrEmail,
             verificationToken,
             'verification',
             'email'
         );
+        return { message: 'Verification email sent successfully.' };
     },
 
     verifyEmail: async (token) => {

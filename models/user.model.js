@@ -89,6 +89,7 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpires: { type: Date },//
     emailVerificationToken: { type: String },//
     phoneVerificationToken: { type: String },//
+    lastVerificationSentAt: { type: Date },
     lastLogin: { type: Date },
     loginAttempts: { type: Number, default: 0 },//
     lockUntil: { type: Date }//
