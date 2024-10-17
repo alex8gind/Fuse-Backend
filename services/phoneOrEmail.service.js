@@ -54,27 +54,51 @@ const sendPasswordResetSMS = async (to, token) => {
 };
 
 const sendWithPhoneOrEmail = async (to, content, type, method) => {
-    if (method === 'email') {
-        if (type === 'verification') {
-            await sendVerificationEmail(to, content);
-        } else if (type === 'passwordReset') {
-            await sendPasswordResetEmail(to, content);
+    console.log(`Sending ${type} via ${method} to ${to}`);
+    try {
+        if (method === 'email') {
+            if (type === 'verification') {
+                await sendVerificationEmail(to, content);
+            } else if (type === 'passwordReset') {
+                await sendPasswordResetEmail(to, content);
+            } else {
+                const subject = `${type.charAt(0).toUpperCase() + type.slice(1)} Notification`;
+                await sendEmail(to, subject, content);
+            }
+        } else if (method === 'sms') {
+            // SMS sending logic
         } else {
-            const subject = `${type.charAt(0).toUpperCase() + type.slice(1)} Notification`;
-            await sendEmail(to, subject, content);
+            throw new Error('Invalid notification method');
         }
-    } else if (method === 'sms') {
-        if (type === 'verification') {
-            await sendVerificationSMS(to, content);
-        } else if (type === 'passwordReset') {
-            await sendPasswordResetSMS(to, content);
-        } else {
-            await sendSMS(to, content);
-        }
-    } else {
-        throw new Error('Invalid notification method');
+        console.log(`Successfully sent ${type} via ${method} to ${to}`);
+    } catch (error) {
+        console.error(`Error sending ${type} via ${method}:`, error);
+        throw error;
     }
 };
+
+// const sendWithPhoneOrEmail = async (to, content, type, method) => {
+//     if (method === 'email') {
+//         if (type === 'verification') {
+//             await sendVerificationEmail(to, content);
+//         } else if (type === 'passwordReset') {
+//             await sendPasswordResetEmail(to, content);
+//         } else {
+//             const subject = `${type.charAt(0).toUpperCase() + type.slice(1)} Notification`;
+//             await sendEmail(to, subject, content);
+//         }
+//     } else if (method === 'sms') {
+//         if (type === 'verification') {
+//             await sendVerificationSMS(to, content);
+//         } else if (type === 'passwordReset') {
+//             await sendPasswordResetSMS(to, content);
+//         } else {
+//             await sendSMS(to, content);
+//         }
+//     } else {
+//         throw new Error('Invalid notification method');
+//     }
+// };
 
 module.exports = {
     sendWithPhoneOrEmail,

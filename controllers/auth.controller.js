@@ -99,15 +99,31 @@ const authController = {
         console.log("BACKEND JUST SENT VERIFICATION EMAIL");
         try {
             const { userId } = req.user;
-            await authService.requestEmailVerification(userId);
-            res.json({ message: 'Email verification sent' });
+            console.log("User ID:", userId);
+            const result = await authService.requestEmailVerification(userId);
+            console.log("Email verification result:", result);
+            res.status(200).json({ message: 'Verification email sent successfully' });
         } catch (error) {
-            if (error.message?.toLowerCase().includes('verification email has already been sent')) {
-                return res.status(400).json({ error: error.message, reason: 'Verification email has already been sent' });
+            console.error("Error in sendVerificationEmail:", error);
+            if (error.message === 'Please wait before requesting another verification email.') {
+                return res.status(400).json({ error: error.message });
             }
-            next(error);
+            res.status(500).json({ error: 'An error occurred while sending the verification email' });
         }
     },
+    // sendVerificationEmail: async (req, res, next) => {
+    //     console.log("BACKEND JUST SENT VERIFICATION EMAIL");
+    //     try {
+    //         const { userId } = req.user;
+    //         await authService.requestEmailVerification(userId);
+    //         res.json({ message: 'Email verification sent' });
+    //     } catch (error) {
+    //         if (error.message?.toLowerCase().includes('verification email has already been sent')) {
+    //             return res.status(400).json({ error: error.message, reason: 'Verification email has already been sent' });
+    //         }
+    //         next(error);
+    //     }
+    // },
 
     verifyEmail: async (req, res, next) => {
         try {

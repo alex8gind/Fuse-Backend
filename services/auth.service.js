@@ -26,12 +26,12 @@ const validatePhoneOrEmail = (phoneOrEmail) => {
     }
 };
 
-const generateTokens = (userId) => {
+const generateTokens = (userId, claims = {role: "user"}, atexp = "15m", rtexp = "7d") => {
     if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
         throw new Error('Token secrets are not set in environment variables');
     }
-    const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+    const accessToken = jwt.sign({ userId, ...claims }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: atexp });
+    const refreshToken = jwt.sign({ userId, ...claims }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: rtexp });
     return { accessToken, refreshToken };
 };
 
@@ -49,7 +49,7 @@ const authService = {
             ...otherUserData,
             password: hashedPassword
           });
-          const { accessToken } = generateTokens(newUser.userId);
+          const { accessToken } = generateTokens(newUser.userId, {scope: "verification"}, "5m");
           return { user: newUser, accessToken };
         } catch (error) {
           console.error('Registration error in service:', error);
@@ -99,14 +99,17 @@ const authService = {
         await authRepo.updateLoginAttempts(user.userId, 0);
     
         // Generate tokens
-        const { accessToken, refreshToken } = generateTokens(user.userId);
-          // Check if PhoneOrEmail is Verified
-          if (!user.isPhoneOrEmailVerified) {
+        // Check if PhoneOrEmail is Verified
+        if (!user.isPhoneOrEmailVerified) {
+            console.log("THAT LINE EXECIUTED");
+            const { accessToken } = generateTokens(user.userId, {scope: "verification"}, "30s");
             return { user, accessToken };
         }
+
+        const { accessToken, refreshToken } = generateTokens(user.userId, {scope: "standard", role: user.isAdmin ? "admin" : "user"});
         await authRepo.saveRefreshToken(user.userId, refreshToken);
         delete user.password;
-
+        
         
         return { 
             user, 
@@ -143,9 +146,12 @@ const authService = {
             if (!user) {
                 throw new Error('Invalid refresh token');
             }
-            const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.userId);
+            
+            const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.userId, {scope: "standard", role: user.isAdmin ? "admin" : "user"});
+            
             await authRepo.removeRefreshToken(user.userId, refreshToken);
             await authRepo.saveRefreshToken(user.userId, newRefreshToken);
+
             return { accessToken, refreshToken: newRefreshToken, user };
         } catch (error) {
             throw new Error('Invalid refresh token');
@@ -175,32 +181,43 @@ const authService = {
     },
 
     requestEmailVerification: async (userId) => {
-        const user = await authRepo.getUserById(userId);
-        if (!user) throw new Error('User not found');
-
-        const verificationStatus = await authRepo.getUserVerificationStatus(userId);
-
-        if (verificationStatus.isVerified) {
-            throw new Error('User is already verified.');
-        }
+        console.log("Requesting email verification for user:", userId);
+        try {
+            const user = await authRepo.getUserById(userId);
+            if (!user) throw new Error('User not found');
     
-         // Check if a verification email was sent recently
-        const cooldownPeriod = 2 * 60 * 1000; // 2 minutes in milliseconds
-        if (verificationStatus.lastVerificationSentAt && 
-        Date.now() - verificationStatus.lastVerificationSentAt < cooldownPeriod) {
-        throw new Error('Please wait before requesting another verification email.');
-    }
-
-        const verificationToken = generateVerificationToken();
-        await authRepo.setVerificationToken(userId, verificationToken, 'email');
-        await authRepo.updateLastVerificationSent(userId);
-        await sendWithPhoneOrEmail(
-            user.phoneOrEmail,
-            verificationToken,
-            'verification',
-            'email'
-        );
-        return { message: 'Verification email sent successfully.' };
+            const verificationStatus = await authRepo.getUserVerificationStatus(userId);
+            console.log("Verification status:", verificationStatus);
+    
+            if (verificationStatus.isVerified) {
+                throw new Error('User is already verified.');
+            }
+    
+            const cooldownPeriod = 1 * 60 * 1000; // 1 minute in milliseconds
+            if (verificationStatus.lastVerificationSentAt && 
+                Date.now() - verificationStatus.lastVerificationSentAt < cooldownPeriod) {
+                throw new Error('Please wait before requesting another verification email.');
+            }
+    
+            const verificationToken = generateVerificationToken();
+            console.log("Generated verification token:", verificationToken);
+    
+            await authRepo.setVerificationToken(userId, verificationToken, 'email');
+            // await authRepo.updateLastVerificationSent(userId);
+    
+            console.log("Sending email to:", user.phoneOrEmail);
+            await sendWithPhoneOrEmail(
+                user.phoneOrEmail,
+                verificationToken,
+                'verification',
+                'email'
+            );
+    
+            return { message: 'Verification email sent successfully.' };
+        } catch (error) {
+            console.error("Error in requestEmailVerification:", error);
+            throw error;
+        }
     },
 
     verifyEmail: async (token) => {

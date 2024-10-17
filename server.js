@@ -5,6 +5,32 @@ const cors = require('cors');
 require('newrelic');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/error.middleware');
+const winston = require('winston')
+
+
+const logFormat = winston.format.printf(({ timestamp, level, message }) => {
+  return `${timestamp} [${level}]: ${message}`
+})
+
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.colorize(), // Add colorization
+    logFormat // Use custom log format
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'app.log' })
+  ]
+});
+
+
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.url}`);
+  next();
+});
 
 // Connect to DB:
 connectDB().catch((error)=>{
