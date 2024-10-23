@@ -5,7 +5,7 @@ const userController = {
     getUserProfile: async (req, res, next) => {
         try {
             const userId = req.user.userId; // Assuming the user ID is attached to the request by the auth middleware
-            const user = await userService.getUserProfile(userId);
+            const user = await userService.userFunctions.getUserProfile(userId);
             res.json({ user });
         } catch (error) {
             next(error);

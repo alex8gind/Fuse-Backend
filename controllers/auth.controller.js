@@ -3,7 +3,6 @@ const authService = require('../services/auth.service');
 
 const authController = {
     register: async (req, res) => {
-        console.log("TRIGGERED");
         try {
             const { user, accessToken, refreshToken } = await authService.register(req.body);
             res.status(201).json({
@@ -32,7 +31,6 @@ const authController = {
     },
 
     login: async (req, res) => {
-        console.log("CREDENTIALS:", req.body);
         try {
             const { phoneOrEmail, password } = req.body;
             const result = await authService.login(phoneOrEmail, password);
@@ -96,12 +94,9 @@ const authController = {
     },
 
     sendVerificationEmail: async (req, res, next) => {
-        console.log("BACKEND JUST SENT VERIFICATION EMAIL");
         try {
             const { userId } = req.user;
-            console.log("User ID:", userId);
             const result = await authService.requestEmailVerification(userId);
-            console.log("Email verification result:", result);
             res.status(200).json({ message: 'Verification email sent successfully' });
         } catch (error) {
             console.error("Error in sendVerificationEmail:", error);

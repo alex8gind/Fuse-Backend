@@ -40,7 +40,6 @@ const authService = {
 
     register: async (userData) => {
         try {
-          console.log('Registration userData:', userData);
           const { password, ...otherUserData } = userData;
           validatePassword(password);
           validatePhoneOrEmail(otherUserData.phoneOrEmail);
@@ -84,7 +83,6 @@ const authService = {
     
         // Validate password
         const isPasswordValid = await comparePassword(password, user.password);
-        console.log("isPASSWORDVALID: ", isPasswordValid);
         if (!isPasswordValid) {
             const attempts = (user.loginAttempts || 0) + 1;
             if (attempts >= MAX_LOGIN_ATTEMPTS) {
@@ -101,7 +99,6 @@ const authService = {
         // Generate tokens
         // Check if PhoneOrEmail is Verified
         if (!user.isPhoneOrEmailVerified) {
-            console.log("THAT LINE EXECIUTED");
             const { accessToken } = generateTokens(user.userId, {scope: "verification"}, "30s");
             return { user, accessToken };
         }
@@ -181,13 +178,11 @@ const authService = {
     },
 
     requestEmailVerification: async (userId) => {
-        console.log("Requesting email verification for user:", userId);
         try {
             const user = await authRepo.getUserById(userId);
             if (!user) throw new Error('User not found');
     
             const verificationStatus = await authRepo.getUserVerificationStatus(userId);
-            console.log("Verification status:", verificationStatus);
     
             if (verificationStatus.isVerified) {
                 throw new Error('User is already verified.');

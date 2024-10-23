@@ -4,9 +4,8 @@ const userController = require('../controllers/user.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { checkUserAuthorization } = require('../middleware/userAuth.middleware');
 const isAdmin = require('../middleware/isAdmin.middleware');
-const { upload, uploadFile } = require('../controllers/upload.controller');
 const {isAccountVerifiedMiddleware} = require('../middleware/verified.middleware');
-
+const documentController = require('../controllers/document.controller');
 
 // Protected routes
 router.use(authMiddleware);
@@ -20,8 +19,9 @@ router.post('/block/:targetUserId', userController.blockUser);
 router.post('/unblock/:targetUserId', userController.unblockUser);
 router.post('/deactivate', userController.deactivateAccount);
 router.post('/reactivate', userController.reactivateAccount);
-router.post('/upload-document', authMiddleware, upload.single('file'), uploadFile);
-
+router.post('/upload', documentController.upload.single('file'), documentController.uploadFile);
+router.get('/med', documentController.getUserDocuments);
+router.delete('/doc/:docId', documentController.deleteDocument);
 
 // Admin routes
 router.get('/admin/all', isAdmin, userController.getAllUsers);

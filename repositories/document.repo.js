@@ -2,44 +2,29 @@ const Document = require('../models/document.model');
 const User = require('../models/user.model');
 
 const documentRepo = {
-    createDocument: async (documentData) => {
-        const newDocument = new Document(documentData);
+    createDocument: async (docData) => {
+        const newDocument = new Document(docData);
         const savedDocument = await newDocument.save();
-        
-        // Add document reference to user
-        await User.findOneAndUpdate(
-            { userId: documentData.userId },
-            { $addToSet: { documents: savedDocument._id } }
-        );
-
         return savedDocument;
     },
 
-    getDocumentById: async (documentId) => {
-        return await Document.findById(documentId).exec();
+    getDocumentById: async (docId) => {
+        console.log("🥶🥶🥶", docId);
+        return await Document.findOne({docId}).exec();
     },
 
-    getUserDocuments: async (userId, skip, limit) => {
-        const user = await User.findOne({ userId }).populate({
-            path: 'documents',
-            options: { skip, limit }
+    getUserDocuments: async (userId) => {
+        const documents = await Document.find({ userId }).exec();
+        return documents
+    },
+
+    deleteDocument: async (docId, userId) => {
+        console.log("🥶🥶🥶", docId, userId);
+        const deletedDocument = await Document.findOneAndDelete({
+            docId: docId,
+            userId: userId
         }).exec();
-        return user ? user.documents : [];
-    },
-
-    updateDocument: async (documentId, updateData) => {
-        return await Document.findByIdAndUpdate(documentId, updateData, { new: true }).exec();
-    },
-
-    deleteDocument: async (documentId, userId) => {
-        const deletedDocument = await Document.findByIdAndDelete(documentId).exec();
-        
-        // Remove document reference from user
-        await User.findOneAndUpdate(
-            { userId },
-            { $pull: { documents: documentId } }
-        );
-
+        console.log("Deleted document:", deletedDocument);
         return deletedDocument;
     }
 };

@@ -4,7 +4,6 @@ const { getUserById } = require('../repositories/auth.repo');
 // Validating Access token:
 const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    console.log("AUTH HEADER:", authHeader);
     const token = authHeader && authHeader.split(' ')[1];
     const route = req.path;
     
@@ -16,9 +15,7 @@ const authMiddleware = async (req, res, next) => {
   
     try {
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-        console.log("DECODED:", decoded);
         const user = await getUserById(decoded.userId);
-        console.log("USER:", user);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
