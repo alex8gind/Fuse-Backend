@@ -31,7 +31,9 @@ const userRepo = {
     },
 
     editUser: async (userId, updateData) => {
-        return await User.findOneAndUpdate({ userId }, updateData, { new: true, runValidators: true }).exec();
+        return await User.findOneAndUpdate({ userId }, updateData, { new: true, runValidators: true })
+        .select('-verificationToken -resetPasswordExpires -loginAttempts -lockUntil -password')
+        .exec();
     },
 
     deleteUser: async (userId) => {

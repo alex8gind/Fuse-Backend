@@ -14,7 +14,7 @@ const userController = {
 
     editUser: async (req, res, next) => {
         try {
-            const { userId } = req.params;
+            const { userId } = req.user;
             const updateData = req.body;
             const updatedUser = await userService.userFunctions.editUser(userId, updateData);
             res.json(updatedUser);
@@ -25,7 +25,7 @@ const userController = {
 
     deleteUser: async (req, res, next) => {
         try {
-            const { userId } = req.params;
+            const { userId } = req.user;
             await userService.userFunctions.deleteUser(userId);
             res.json({ message: 'User deleted successfully' });
         } catch (error) {

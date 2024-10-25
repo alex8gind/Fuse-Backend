@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
-const {isAccountVerifiedMiddleware} = require('../middleware/verified.middleware');
 
 // Public routes
 router.post('/register', authController.register);
@@ -19,9 +18,6 @@ router.post('/logout', authController.logout);
 router.post('/verify-email', authController.sendVerificationEmail);//triggered by account registration in front end
 router.get('/refresh-tokens', authController.getAllRefreshTokens);
 router.delete('/refresh-tokens', authController.removeAllRefreshTokens);
-
-router.use(isAccountVerifiedMiddleware);
-
 router.post('/change-password', authController.changePassword);
 router.get('/verification-status', authController.getUserVerificationStatus);
 router.post('/change-phone-or-email', authController.changePhoneOrEmail);
