@@ -14,7 +14,7 @@ const emailTransporter = nodemailer.createTransport({
 
 
 // SMS configuration (using Twilio)
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const sendEmail = async (to, subject, html) => {
     const mailOptions = {
@@ -27,13 +27,13 @@ const sendEmail = async (to, subject, html) => {
     await emailTransporter.sendMail(mailOptions);
 };
 
-const sendSMS = async (to, body) => {
-    await twilioClient.messages.create({
-        body,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to
-    });
-};
+// const sendSMS = async (to, body) => {
+//     await twilioClient.messages.create({
+//         body,
+//         from: process.env.TWILIO_PHONE_NUMBER,
+//         to
+//     });
+// };
 
 const sendVerificationEmail = async (to, token) => {
     await sendEmail(to, 'Email Verification',
@@ -101,7 +101,5 @@ const sendWithPhoneOrEmail = async (to, content, type, method) => {
 // };
 
 module.exports = {
-    sendWithPhoneOrEmail,
-    sendEmail,
-    sendSMS
+    sendWithPhoneOrEmail
 };
