@@ -47,11 +47,27 @@ connectDB().catch((error)=>{
   process.exit(1); // Exit process with failure
 })
 
+const whitelist = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://fuse-f3b7e.web.app'
+]
 // Middlewares:
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (whitelist.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Import Routes:
