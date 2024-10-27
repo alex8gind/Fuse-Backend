@@ -42,7 +42,33 @@ const sendVerificationEmail = async (to, token) => {
 };
 
 const sendPasswordResetEmail = async (to, token) => {
-    await sendEmail(to, 'Password Reset', `Your password reset token is: ${token}`);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+
+    await sendEmail(
+        to, 
+        'Password Reset', 
+        `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Password Reset</h2>
+            <p>You requested a password reset. Click the button below to create a new password:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetLink}" 
+                   style="background-color: #E86C25; 
+                          color: white; 
+                          padding: 12px 24px; 
+                          text-decoration: none; 
+                          border-radius: 4px;
+                          display: inline-block;">
+                    Reset Password
+                </a>
+            </div>
+            <p style="color: #666; font-size: 14px;">
+                If you didn't request this, you can safely ignore this email.
+                This link will expire in 1 hour.
+            </p>
+        </div>
+        `
+    );
 };
 
 const sendVerificationSMS = async (to, token) => {

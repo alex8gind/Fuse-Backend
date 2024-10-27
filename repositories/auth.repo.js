@@ -18,7 +18,10 @@ const authRepo = {
     },
 
     findUserForPasswordReset: async (phoneOrEmail) => {
-        return await User.findOne({ phoneOrEmail }).select('userId phoneOrEmail').exec();
+        return await User.findOne({ phoneOrEmail })
+        .select('userId phoneOrEmail')
+        .lean()
+        .exec();
     },
     
     updatePassword: async (userId, hashedPassword) => {
@@ -102,6 +105,13 @@ const authRepo = {
             { resetPasswordToken: null, resetPasswordExpires: null },
             { new: true }
         ).exec();
+    },
+
+    findUserByResetToken: async (token) => {
+        return await User.findOne({ 
+          resetPasswordToken: token,
+          resetPasswordExpires: { $gt: Date.now() } 
+        }).select('userId resetPasswordExpires').lean().exec();
     },
 
     saveRefreshToken: async (userId, refreshToken) => {

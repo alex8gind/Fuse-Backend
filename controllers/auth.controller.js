@@ -93,7 +93,7 @@ const authController = {
         }
     },
 
-    sendVerificationEmail: async (req, res, next) => {
+    sendVerificationEmail: async (req, res) => {
         try {
             const { userId } = req.user;
             const result = await authService.requestEmailVerification(userId);
@@ -133,23 +133,94 @@ const authController = {
         }
     },
 
-    forgotPassword: async (req, res, next) => {
+    forgotPassword: async (req, res) => {
         try {
-            const { phoneOrEmail } = req.body;
-            await authService.requestPasswordReset(phoneOrEmail);
-            res.json({ message: 'Password reset instructions sent' });
+          const { phoneOrEmail } = req.body;
+      
+          if (!phoneOrEmail) {
+            return res.status(400).json({ 
+              error: 'Phone number or email is required' 
+            });
+          }
+      
+          await authService.forgotPassword(phoneOrEmail);
+          
+          res.json({ 
+            message: 'Password reset instructions sent successfully' 
+          });
+      
         } catch (error) {
-            next(error);
+          // Handle specific error cases
+          if (error.message === 'No account found with this phone number or email') {
+            return res.status(404).json({ error: error.message });
+          }
+      
+          if (error.message.includes('Invalid') || error.message.includes('required')) {
+            return res.status(400).json({ error: error.message });
+          }
+      
+          if (error.message.includes('Too many requests')) {
+            return res.status(429).json({ error: error.message });
+          }
+      
+          // Log unexpected errors
+          console.error('Forgot password error:', error);
+          res.status(500).json({ 
+            error: 'An error occurred while processing your request' 
+          });
         }
-    },
-
-    resetPassword: async (req, res, next) => {
+      },
+      
+    validateResetToken: async (req, res) => {
         try {
-            const { userId, token, newPassword } = req.body;
-            await authService.resetPassword(userId, token, newPassword);
-            res.json({ message: 'Password reset successfully' });
+          const { token } = req.body;
+          const isValid = await authService.validateResetToken(token);
+          res.json({ valid: isValid });
         } catch (error) {
-            next(error);
+          if (error.message === 'Reset token not found') {
+            return res.status(404).json({ error: error.message });
+          }
+          if (error.message === 'Reset token has expired') {
+            return res.status(401).json({ error: error.message });
+          }
+          res.status(400).json({ error: error.message });
+        }
+      },
+
+      resetPassword: async (req, res) => {
+        try {
+            const { token, newPassword } = req.body;
+    
+            if (!token || !newPassword) {
+                return res.status(400).json({
+                    error: 'Token and new password are required'
+                });
+            }
+    
+            await authService.resetPassword(token, newPassword);
+            
+            res.json({ 
+                message: 'Password has been reset successfully' 
+            });
+    
+        } catch (error) {
+            console.error('Password reset error:', error);
+    
+            if (error.message === 'Reset token not found') {
+                return res.status(404).json({ 
+                    error: 'Invalid or expired reset token' 
+                });
+            }
+    
+            if (error.message.includes('Password must be')) {
+                return res.status(400).json({ 
+                    error: error.message 
+                });
+            }
+    
+            res.status(500).json({
+                error: 'An error occurred while resetting your password'
+            });
         }
     },
 

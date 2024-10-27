@@ -7,9 +7,10 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/verify-email/:token', authController.verifyEmail);//triggered by user clicking on sent email link
+router.post('/validate-reset-token', authController.validateResetToken);
+router.post('/reset-password', authController.resetPassword);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/forgot-password', authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
 
 // Protected routes
 router.use(authMiddleware);

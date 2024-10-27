@@ -253,31 +253,76 @@ const authService = {
     },
 
     forgotPassword: async (phoneOrEmail) => {
-        const user = await authRepo.findUserForPasswordReset(phoneOrEmail);
-        if (!user) throw new Error('User not found');
-        const resetToken = generateVerificationToken();
-        const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
-        await authRepo.setResetPasswordToken(user.userId, resetToken, resetTokenExpiry);
-        await sendWithPhoneOrEmail(
-            phoneOrEmail,
-            resetToken,
-            'passwordReset',
-            phoneOrEmail.includes('@') ? 'email' : 'sms'
-        );
+        try {
+            // Find the user
+            const user = await authRepo.findUserForPasswordReset(phoneOrEmail);
+            
+            if (!user) {
+                throw new Error('No account found with this phone number or email');
+            }
+    
+            // Generate reset token
+            const resetToken = generateVerificationToken();
+            const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+    
+            // Save token to user
+            await authRepo.setResetPasswordToken(user.userId, resetToken, resetTokenExpiry);
+    
+            // Send reset instructions
+            await sendWithPhoneOrEmail(
+                phoneOrEmail,
+                resetToken,
+                'passwordReset',
+                phoneOrEmail.includes('@') ? 'email' : 'sms'
+            );
+    
+            return true;
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            throw error;
+        }
     },
 
-
-    resetPassword: async (userId, token, newPassword) => {
-        const user = await authRepo.getUserById(userId);
-        if (!user || user.resetPasswordToken !== token || user.resetPasswordExpires < new Date()) {
-            throw new Error('Invalid or expired reset token');
+    validateResetToken: async (token) => {
+        const user = await authRepo.findUserByResetToken(token);
+        
+        if (!user) {
+          throw new Error('Reset token not found');
         }
-        validatePassword(newPassword);
-        const hashedPassword = await hashPassword(newPassword);
-        await authRepo.updatePassword(userId, hashedPassword);
-        return await authRepo.clearResetPasswordToken(userId);
-    }
+        
+        // Check if token has expired
+        if (user.resetPasswordExpires < new Date()) {
+          throw new Error('Reset token has expired');
+        }
+        
+        return true;
+    },
+      
 
+    resetPassword: async (token, newPassword) => {
+        try {
+            // First find user by reset token
+            const user = await authRepo.findUserByResetToken(token);
+            if (!user) {
+                throw new Error('Reset token not found');
+            }
+    
+            // Validate password format
+            validatePassword(newPassword);
+    
+            // Hash the new password
+            const hashedPassword = await hashPassword(newPassword);
+    
+            // Update password and clear reset token
+            await authRepo.updatePassword(user.userId, hashedPassword);
+            await authRepo.clearResetPasswordToken(user.userId);
+    
+            return true;
+        } catch (error) {
+            console.log('Reset password error:', error);
+            throw error;
+        }
+    }
 };
 
 module.exports = authService;
