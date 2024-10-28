@@ -91,6 +91,12 @@ const authRepo = {
         return user ? user.lockUntil : null;
     },
 
+    checkResetToken: async (userId, token) => {
+        const user = await getUserById(userId);
+        if (!user.resetPasswordToken) return false;
+        return await comparePassword(token, user.resetPasswordToken);
+    },
+
     setResetPasswordToken: async (userId, token, expires) => {
         return await User.findOneAndUpdate(
             { userId },

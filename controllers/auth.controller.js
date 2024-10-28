@@ -120,16 +120,51 @@ const authController = {
     //     }
     // },
 
-    verifyEmail: async (req, res, next) => {
+    verifyEmail: async (req, res) => {
         try {
             const { token } = req.params;
-            const user = await authService.verifyEmail(token);
-            if (user.message === 'Email already verified') {
-                return res.status(200).json({ message: user.message, isPhoneOrEmailVerified: user.isPhoneOrEmailVerified });
+            
+            if (!token) {
+                return res.status(400).json({ 
+                    error: 'Token is required' 
+                });
             }
-            res.json({ message: 'Email verified successfully', isPhoneOrEmailVerified: user.isPhoneOrEmailVerified });
+    
+            const result = await authService.verifyEmail(token);
+            res.json(result);
+    
         } catch (error) {
-            next(error);
+            console.error('Email verification error:', error);
+            
+            // Handle specific error cases with appropriate HTTP status codes
+            if (error.message === 'Invalid token type') {
+                return res.status(400).json({ 
+                    error: 'Invalid token format' 
+                });
+            }
+            
+            if (error.message === 'Invalid token: user mismatch') {
+                return res.status(404).json({ 
+                    error: 'User not found or token mismatch' 
+                });
+            }
+            
+            if (error.message === 'Verification token has expired') {
+                return res.status(401).json({ 
+                    error: 'Token has expired. Please request a new verification email.' 
+                });
+            }
+    
+            if (error.name === 'JsonWebTokenError') {
+                return res.status(400).json({ 
+                    error: 'Invalid token' 
+                });
+            }
+    
+            // For unexpected errors
+            res.status(500).json({ 
+                error: 'An error occurred during email verification' 
+            });
         }
     },
 

@@ -10,6 +10,98 @@ const generateVerificationToken = () => uuidv4();
 // console.log('ACCESS_TOKEN_SECRET:', process.env.ACCESS_TOKEN_SECRET);
 // console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET);
 
+// const generateTokens = (userId, claims = {role: "user"}, atexp = "15m", rtexp = "7d") => {
+//     if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+//         throw new Error('Token secrets are not set in environment variables');
+//     }
+//     const accessToken = jwt.sign({ userId, ...claims }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: atexp });
+//     const refreshToken = jwt.sign({ userId, ...claims }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: rtexp });
+//     return { accessToken, refreshToken };
+// };
+
+const getTokenSecret = (type) => {
+    const secretMap = {
+        'standard_access': process.env.ACCESS_TOKEN_SECRET,
+        'standard_refresh': process.env.REFRESH_TOKEN_SECRET,
+        'verification': process.env.VERIFICATION_TOKEN_SECRET,
+        'password_reset': process.env.RESET_TOKEN_SECRET
+    };
+
+    const secret = secretMap[type];
+    if (!secret) {
+        throw new Error(`Token secret not set for type: ${type}`);
+    }
+    return secret;
+};
+
+const generateTokens = (payload = {}, claims = {}, options = {}) => {
+    const {
+        type = 'standard',
+        atexp = "15m",
+        rtexp = "7d",
+        rpexp = "3d"
+    } = options;
+
+    const basePayload = {
+        userId: payload.userId,
+        type,
+        nonce: Math.random().toString(36).substring(2), 
+        role: claims.role || 'user',    
+        ...claims
+    };
+
+    switch (type) {
+        case 'standard':
+            const accessToken = jwt.sign(
+                { ...basePayload, 
+                tokenType: 'access',
+                type: 'standard' 
+                },
+                getTokenSecret('standard_access'),
+                { expiresIn: atexp }
+            );
+            const refreshToken = jwt.sign(
+                { ...basePayload, 
+                    tokenType: 'refresh',
+                    type: 'standard'  
+                },
+                getTokenSecret('standard_refresh'),
+                { expiresIn: rtexp }
+            );
+            return { accessToken, refreshToken };
+
+        case 'verification':
+            return {
+                accessToken: jwt.sign(
+                    { ...basePayload, tokenType: 'verification', phoneOrEmail: payload.phoneOrEmail },
+                    getTokenSecret('verification'),
+                    { expiresIn: atexp }
+                )
+            };
+
+        case 'password_reset':
+            if (!payload.phoneOrEmail) {
+                throw new Error('phoneOrEmail required for password reset token');
+            }
+            const resetToken = jwt.sign(
+                { 
+                    ...basePayload, 
+                    tokenType: 'reset',
+                    phoneOrEmail: payload.phoneOrEmail
+                },
+                getTokenSecret('password_reset'),
+                { 
+                    expiresIn: rpexp,
+                    jwtid: Math.random().toString(36).substring(2)
+                }
+            );
+            return { resetToken };
+
+        default:
+            throw new Error('Invalid token type');
+    }
+};
+
 const validatePassword = (password) => {
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).*$/;
     if (!passwordRegex.test(password) || password.length < 8) {
@@ -26,37 +118,35 @@ const validatePhoneOrEmail = (phoneOrEmail) => {
     }
 };
 
-const generateTokens = (userId, claims = {role: "user"}, atexp = "15m", rtexp = "7d") => {
-    if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
-        throw new Error('Token secrets are not set in environment variables');
-    }
-    const accessToken = jwt.sign({ userId, ...claims }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: atexp });
-    const refreshToken = jwt.sign({ userId, ...claims }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: rtexp });
-    return { accessToken, refreshToken };
-};
-
-
 const authService = {
-
     register: async (userData) => {
         try {
-          const { password, ...otherUserData } = userData;
-          validatePassword(password);
-          validatePhoneOrEmail(otherUserData.phoneOrEmail);
-          const hashedPassword = await hashPassword(password);
-          const newUser = await userService.userFunctions.createUser({
-            ...otherUserData,
-            password: hashedPassword
-          });
-          const { accessToken } = generateTokens(newUser.userId, {scope: "verification"}, "5m");
-          return { user: newUser, accessToken };
+            const { password, ...otherUserData } = userData;
+            validatePassword(password);
+            validatePhoneOrEmail(otherUserData.phoneOrEmail);
+            const hashedPassword = await hashPassword(password);
+            const newUser = await userService.userFunctions.createUser({
+                ...otherUserData,
+                password: hashedPassword
+            });
+            const { accessToken } = generateTokens(
+                {
+                    userId: newUser.userId,  
+                    phoneOrEmail: otherUserData.phoneOrEmail
+                },
+                {},
+                {
+                    type: 'verification',  
+                    atexp: "5m"
+                });
+            return { user: newUser, accessToken };
         } catch (error) {
-          console.error('Registration error in service:', error);
-          throw error;
+            console.error('Registration error in service:', error);
+            throw error;
         }
-      },
+    },
 
-      login: async (phoneOrEmail, password) => {
+    login: async (phoneOrEmail, password) => {
         // Input validation
         if (!phoneOrEmail || !password) {
             throw new Error('Phone/Email and password are required');
@@ -96,17 +186,26 @@ const authService = {
         // Reset login attempts on successful login
         await authRepo.updateLoginAttempts(user.userId, 0);
     
-        // Generate tokens
         // Check if PhoneOrEmail is Verified
         if (!user.isPhoneOrEmailVerified) {
-            const { accessToken } = generateTokens(user.userId, {scope: "verification"}, "30s");
+            const { accessToken } = generateTokens({userId: user.userId, phoneOrEmail: user.phoneOrEmail}, 
+                {}, 
+                {
+                type: 'verification', 
+                atexp: "30s"
+                });
             return { user, accessToken };
         }
 
-        const { accessToken, refreshToken } = generateTokens(user.userId, {scope: "standard", role: user.isAdmin ? "admin" : "user"});
+        const { accessToken, refreshToken } = generateTokens({userId: user.userId}, 
+            {
+            role: user.isAdmin ? "admin" : "user"
+            }, 
+            {
+            type: 'standard'
+            });
         await authRepo.saveRefreshToken(user.userId, refreshToken);
         delete user.password;
-        
         
         return { 
             user, 
@@ -138,18 +237,26 @@ const authService = {
 
     refreshToken: async (refreshToken) => {
         try {
-            const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+            const payload = jwt.verify(refreshToken, getTokenSecret('standard_refresh'));
+            if (payload.tokenType !== 'refresh') {
+                throw new Error('Invalid token type');
+            }
+
             const user = await authRepo.getUserById(payload.userId);
             if (!user) {
                 throw new Error('Invalid refresh token');
             }
             
-            const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.userId, {scope: "standard", role: user.isAdmin ? "admin" : "user"});
+            const tokens = generateTokens({userId: user.userId}, 
+                {
+                role: user.isAdmin ? "admin" : "user"
+                }, 
+                { type: 'standard' });
             
             await authRepo.removeRefreshToken(user.userId, refreshToken);
-            await authRepo.saveRefreshToken(user.userId, newRefreshToken);
+            await authRepo.saveRefreshToken(user.userId, tokens.refreshToken);
 
-            return { accessToken, refreshToken: newRefreshToken, user };
+            return { ...tokens, user };
         } catch (error) {
             throw new Error('Invalid refresh token');
         }
@@ -194,11 +301,15 @@ const authService = {
                 throw new Error('Please wait before requesting another verification email.');
             }
     
-            const verificationToken = generateVerificationToken();
-            console.log("Generated verification token:", verificationToken);
+            const { accessToken: verificationToken } = generateTokens({userId, phoneOrEmail: user.phoneOrEmail}, 
+                {}, 
+                {
+                type: 'verification',
+                atexp: '1h'  // 1 hour expiry for email verification
+                });
     
-            await authRepo.setVerificationToken(userId, verificationToken, 'email');
-            // await authRepo.updateLastVerificationSent(userId);
+            const tokenHash = await hashPassword(verificationToken);
+            await authRepo.setVerificationToken(userId, tokenHash, 'email');
     
             console.log("Sending email to:", user.phoneOrEmail);
             await sendWithPhoneOrEmail(
@@ -216,59 +327,127 @@ const authService = {
     },
 
     verifyEmail: async (token) => {
-        const user = await authRepo.getUserByVerificationToken(token);
-        if (!user) {
-            throw new Error('Invalid verification token:: user not found');
+        try {
+            console.log('Verifying email with token');
+            const decoded = jwt.verify(token, getTokenSecret('verification'));
+            console.log('Token decoded successfully:', decoded);
+            
+            if (decoded.type !== 'verification') {
+                throw new Error('Invalid token type');
+            }
+    
+            const user = await authRepo.getUserById(decoded.userId);
+            if (!user || user.phoneOrEmail !== decoded.phoneOrEmail) {
+                throw new Error('Invalid token: user mismatch');
+            }
+    
+            // Generate standard tokens with correct type
+            const { accessToken, refreshToken } = generateTokens(
+                { userId: decoded.userId },
+                { role: user.isAdmin ? "admin" : "user" },
+                { type: 'standard' }  // This ensures we get access/refresh tokens
+            );
+    
+            // Save refresh token regardless of verification status
+            await authRepo.saveRefreshToken(decoded.userId, refreshToken);
+    
+            if (user.isPhoneOrEmailVerified) {
+                return { 
+                    message: 'Email already verified', 
+                    isPhoneOrEmailVerified: true,
+                    accessToken,
+                    refreshToken
+                };
+            }
+    
+            const updatedUser = await authRepo.verifyEmailOrPhone(decoded.userId, 'email');
+            
+            return { 
+                message: 'Email verified successfully', 
+                isPhoneOrEmailVerified: updatedUser.isPhoneOrEmailVerified,
+                accessToken,
+                refreshToken
+            };
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                throw new Error('Verification token has expired');
+            }
+            throw new Error('Invalid verification token');
         }
-        if (user.isPhoneOrEmailVerified) {
-            return { message: 'Email already verified', isPhoneOrEmailVerified: true };
-        }
-        const isValid = await authRepo.checkVerificationToken(user.userId, token, 'email');
-        if (!isValid) {
-            throw new Error('Invalid verification token:: isValid failed');
-        }
-        const updatedUser = await authRepo.verifyEmailOrPhone(user.userId, 'email');
-        return { message: 'Email verified successfully', isPhoneOrEmailVerified: updatedUser.isPhoneOrEmailVerified };
     },
 
     requestPhoneVerification: async (userId) => {
-        const user = await authRepo.getUserById(userId);
-        if (!user) throw new Error('User not found');
-        const verificationToken = generateVerificationToken();
-        await authRepo.setVerificationToken(userId, verificationToken, 'phone');
-        await sendWithPhoneOrEmail(
-            user.phoneOrEmail,
-            verificationToken,
-            'verification',
-            'sms'
-        );
+        try {
+            const user = await authRepo.getUserById(userId);
+            if (!user) throw new Error('User not found');
+    
+            const { accessToken: verificationToken } = generateTokens({userId, phoneOrEmail: user.phoneOrEmail},
+                {}, 
+                {
+                type: 'verification', 
+                atexp: '5m'  // 5 minutes expiry for SMS verification
+                });
+    
+            const tokenHash = await hashPassword(verificationToken);
+            await authRepo.setVerificationToken(userId, tokenHash, 'phone');
+    
+            await sendWithPhoneOrEmail(
+                user.phoneOrEmail,
+                verificationToken,
+                'verification',
+                'sms'
+            );
+
+            return { message: 'Verification SMS sent successfully.' };
+        } catch (error) {
+            console.error("Error in requestPhoneVerification:", error);
+            throw error;
+        }
     },
 
     verifyPhone: async (userId, token) => {
-        const isValid = await authRepo.checkVerificationToken(userId, token, 'phone');
-        if (!isValid) {
+        try {
+            const decoded = jwt.verify(token, getTokenSecret('verification'));
+            
+            if (decoded.type !== 'verification') {
+                throw new Error('Invalid token type');
+            }
+
+            if (decoded.userId !== userId) {
+                throw new Error('Invalid token: user mismatch');
+            }
+
+            const isValid = await authRepo.checkVerificationToken(userId, token, 'phone');
+            if (!isValid) {
+                throw new Error('Invalid verification token');
+            }
+
+            return await authRepo.verifyEmailOrPhone(userId, 'phone');
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                throw new Error('Verification token has expired');
+            }
             throw new Error('Invalid verification token');
         }
-        return await authRepo.verifyEmailOrPhone(userId, 'phone');
     },
 
     forgotPassword: async (phoneOrEmail) => {
         try {
-            // Find the user
             const user = await authRepo.findUserForPasswordReset(phoneOrEmail);
             
             if (!user) {
                 throw new Error('No account found with this phone number or email');
             }
     
-            // Generate reset token
-            const resetToken = generateVerificationToken();
-            const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+            const { resetToken } = generateTokens({userId: user.userId, phoneOrEmail}, 
+                {}, 
+                {
+                type: 'password_reset'
+                });
+            
+            const tokenHash = await hashPassword(resetToken);
+            await authRepo.setResetPasswordToken(user.userId, tokenHash);
     
-            // Save token to user
-            await authRepo.setResetPasswordToken(user.userId, resetToken, resetTokenExpiry);
-    
-            // Send reset instructions
             await sendWithPhoneOrEmail(
                 phoneOrEmail,
                 resetToken,
@@ -284,43 +463,65 @@ const authService = {
     },
 
     validateResetToken: async (token) => {
-        const user = await authRepo.findUserByResetToken(token);
-        
-        if (!user) {
-          throw new Error('Reset token not found');
+        try {
+            const decoded = jwt.verify(token, getTokenSecret('password_reset'));
+            
+            if (decoded.type !== 'password_reset') {
+                throw new Error('Invalid token type');
+            }
+
+            const user = await authRepo.getUserById(decoded.userId);
+            if (!user || user.phoneOrEmail !== decoded.phoneOrEmail) {
+                throw new Error('Invalid token: user mismatch');
+            }
+
+            const isValid = await authRepo.checkResetToken(user.userId, token);
+            if (!isValid) {
+                throw new Error('Invalid reset token');
+            }
+
+            return true;
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                throw new Error('Reset token has expired');
+            }
+            throw new Error('Invalid reset token');
         }
-        
-        // Check if token has expired
-        if (user.resetPasswordExpires < new Date()) {
-          throw new Error('Reset token has expired');
-        }
-        
-        return true;
     },
-      
+
 
     resetPassword: async (token, newPassword) => {
         try {
-            // First find user by reset token
-            const user = await authRepo.findUserByResetToken(token);
-            if (!user) {
-                throw new Error('Reset token not found');
+            const decoded = jwt.verify(token, getTokenSecret('password_reset'));
+            
+            if (decoded.type !== 'password_reset') {
+                throw new Error('Invalid token type');
+            }
+
+            const user = await authRepo.getUserById(decoded.userId);
+            if (!user || user.phoneOrEmail !== decoded.phoneOrEmail) {
+                throw new Error('Invalid token: user mismatch');
+            }
+
+            // Verify against stored hash
+            const isValid = await authRepo.checkResetToken(user.userId, token);
+            if (!isValid) {
+                throw new Error('Invalid reset token');
             }
     
-            // Validate password format
             validatePassword(newPassword);
-    
-            // Hash the new password
             const hashedPassword = await hashPassword(newPassword);
     
-            // Update password and clear reset token
             await authRepo.updatePassword(user.userId, hashedPassword);
             await authRepo.clearResetPasswordToken(user.userId);
     
             return true;
         } catch (error) {
-            console.log('Reset password error:', error);
-            throw error;
+            if (error.name === 'TokenExpiredError') {
+                throw new Error('Reset token has expired');
+            }
+            console.error('Reset password error:', error);
+            throw new Error('Invalid reset token');
         }
     }
 };
