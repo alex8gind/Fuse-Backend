@@ -224,12 +224,22 @@ const authService = {
     },
 
     getUserVerificationStatus: async (userId) => {
-        const status = await authRepo.getUserVerificationStatus(userId);
-        if (!status) {
+        try {
+          const user = await authRepo.getUserVerificationStatus(userId);
+          if (!user) {
             throw new Error('User not found');
+          }
+          return {
+            hasVerificationToken: !!user.emailVerificationToken,
+            isPhoneOrEmailVerified: user.isPhoneOrEmailVerified,
+            isVerified: user.isVerified
+          };
+        } catch (error) {
+          console.error("Error in getUserVerificationStatus service:", error);
+          throw error;
         }
-        return status;
-    },
+      },
+      
 
     logout: async (userId, refreshToken) => {
         await authRepo.removeRefreshToken(userId, refreshToken);

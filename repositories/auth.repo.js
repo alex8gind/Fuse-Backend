@@ -138,11 +138,9 @@ const authRepo = {
     },
 
     getUserVerificationStatus: async (userId) => {
-        const user = await User.findOne({ userId }).select('emailVerificationToken isPhoneOrEmailVerified').exec();
-        return user ? {
-            hasVerificationToken: !!user.emailVerificationToken,
-            isVerified: user.isPhoneOrEmailVerified
-        } : null;
+        return await User.findOne({ userId })
+        .select('emailVerificationToken isPhoneOrEmailVerified isVerified')
+        .exec();
     },
 
     getUserByVerificationToken: async (token) => {

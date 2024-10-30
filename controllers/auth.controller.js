@@ -259,13 +259,15 @@ const authController = {
         }
     },
 
-    getUserVerificationStatus: async (req, res, next) => {
+    getUserVerificationStatus: async (req, res) => {
         try {
             const { userId } = req.user;
             const status = await authService.getUserVerificationStatus(userId);
             res.json(status);
         } catch (error) {
-            next(error);
+            console.error("Error in getUserVerificationStatus controller:", error);
+            res.status(500).json({ error: 'Failed to get verification status' });
+  
         }
     },
 

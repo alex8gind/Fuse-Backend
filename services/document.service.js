@@ -1,21 +1,36 @@
 const cloudinary = require('cloudinary').v2;
 const User = require('../models/user.model');
 const { getUserById } = require('../repositories/user.repo');
-const { createDocument, getDocumentById, getUserDocuments,deleteDocument } = require('../repositories/document.repo');
+const { createDocument, getDocumentById, getUserDocuments,deleteDocument, getVerificationDocuments } = require('../repositories/document.repo');
 
   const documentService = {
 
-//     uploadToCloudinary: async (file) => {
-//       try {
-//         const result = await cloudinary.uploader.upload(file.path, {
-//           folder: 'user_documents',
-//         });
-//         return result.secure_url;
-//       } catch (error) {
-//         console.error('Cloudinary upload error:', error);
-//         throw new Error('Failed to upload file to Cloudinary');
-//       }
-    // },
+   uploadVerificationDocument: async (docData) => {
+      try {
+
+       // Check if user already has a verification document of the same type
+      const existingDocs = await getVerificationDocuments(docData.userId);
+      const existingDoc = existingDocs.find(doc => doc.documentType === docData.documentType);
+
+      if (existingDoc) {
+                throw new Error(`You have already uploaded a ${docData.documentType}. Please delete the existing one first.`);
+      }
+    
+      return await createDocument(docData);
+      } catch (error) {
+        console.error('Verification document upload error:', error);
+        throw error;
+      }
+},
+
+  getVerificationDocuments: async (userId) => {
+  try {
+      return await getVerificationDocuments(userId);
+  } catch (error) {
+      console.error('Error fetching verification documents:', error);
+      throw error;
+  }
+},
   
     addDocumentToUser: async (docData) => {
       return await createDocument(docData);

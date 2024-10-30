@@ -2,7 +2,7 @@ const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 const User = require('../models/user.model');
-const { addDocumentToUser, deleteDocument, getUserDocuments } = require('../services/document.service');
+const { addDocumentToUser, deleteDocument, getUserDocuments, getVerificationDocuments, uploadVerificationDocument } = require('../services/document.service');
 
 // Cloudinary configuration
 cloudinary.config({
@@ -29,6 +29,60 @@ const upload = multer({
 });
 
 const documentController = {
+
+  uploadVerificationDocument: async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        console.log('Uploading verification document:', {
+          type: req.body.documentType,
+          userId: req.user.userId
+      });
+
+        const docData = {
+            userId: req.user.userId,
+            docName: req.file.originalname,
+            documentType: req.body.documentType,
+            fileType: req.file.mimetype.split('/')[1],
+            url: req.file.path,
+            docSize: req.file.size
+        };
+
+
+        const document = await uploadVerificationDocument(docData);
+
+        res.status(201).json({
+            success: true,
+            document
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+},
+
+getVerificationDocuments: async (req, res) => {
+    try {
+      console.log('Getting documents for user:', req.user.userId);
+        const documents = await getVerificationDocuments(req.user.userId);
+        res.json({
+            success: true,
+            documents
+        });
+    } catch (error) {
+      console.error('Error fetching verification documents:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+},
+
   uploadFile: async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });

@@ -13,9 +13,11 @@ router.use(authMiddleware);
 router.delete('/profile', userController.deleteUser);
 router.put('/profile', userController.editUser);
 
+
 router.use(isAccountVerifiedMiddleware);
 
 router.get('/profile', userController.getUserProfile);
+router.put('/profile', userController.editUser);
 router.post('/report/:reportedUserId', userController.reportUser);
 router.post('/block/:targetUserId', userController.blockUser);
 router.post('/unblock/:targetUserId', userController.unblockUser);

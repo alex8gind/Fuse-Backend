@@ -16,6 +16,11 @@ const userController = {
         try {
             const { userId } = req.user;
             const updateData = req.body;
+            
+            if(typeof updateData.profilePicture !== 'string') {
+                res.status(400).json({error: 'Profile picture must be a string'})
+            }
+
             const updatedUser = await userService.userFunctions.editUser(userId, updateData);
             res.json(updatedUser);
         } catch (error) {

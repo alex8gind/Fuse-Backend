@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const documentController = require('../controllers/document.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
+const { verificationDocMiddleware } = require('../middleware/verificationDocMiddleware');
+
 
 // Public routes
 router.post('/register', authController.register);
@@ -14,6 +17,10 @@ router.post('/refresh-token', authController.refreshToken);
 
 // Protected routes
 router.use(authMiddleware);
+
+router.post('/verification-documents', documentController.upload.single('file'), documentController.uploadVerificationDocument);
+router.get('/verification-documents', documentController.getVerificationDocuments);
+router.delete('/verification-documents/:docId', documentController.deleteDocument);
 
 router.post('/logout', authController.logout);
 router.post('/verify-email', authController.sendVerificationEmail);//triggered by account registration in front end
