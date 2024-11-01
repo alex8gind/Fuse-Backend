@@ -187,7 +187,7 @@ const authService = {
         await authRepo.updateLoginAttempts(user.userId, 0);
     
         // Check if PhoneOrEmail is Verified
-        if (!user.isPhoneOrEmailVerified) {
+        if (!user.isAdmin && !user.isPhoneOrEmailVerified) {
             const { accessToken } = generateTokens({userId: user.userId, phoneOrEmail: user.phoneOrEmail}, 
                 {}, 
                 {
@@ -195,7 +195,7 @@ const authService = {
                 atexp: "30s"
                 });
             return { user, accessToken };
-        }
+        } 
 
         const { accessToken, refreshToken } = generateTokens({userId: user.userId}, 
             {

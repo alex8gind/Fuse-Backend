@@ -83,7 +83,6 @@ const userSchema = new mongoose.Schema({
         cloudinaryUrl: String,
         uploadedAt: { type: Date, default: Date.now }
     }],
-    connections: [{ type: String, ref: 'User' }],
     isPhoneOrEmailVerified: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },

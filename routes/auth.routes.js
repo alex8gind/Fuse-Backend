@@ -15,6 +15,7 @@ router.post('/validate-reset-token', authController.validateResetToken);
 router.post('/reset-password', authController.resetPassword);
 router.post('/refresh-token', authController.refreshToken);
 
+
 // Protected routes
 router.use(authMiddleware);
 

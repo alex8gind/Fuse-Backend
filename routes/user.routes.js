@@ -6,6 +6,7 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 const isAdmin = require('../middleware/isAdmin.middleware');
 const {isAccountVerifiedMiddleware} = require('../middleware/verified.middleware');
 const documentController = require('../controllers/document.controller');
+const connectionController = require('../controllers/connection.controller');
 // const docusignController = require('../controllers/docusign.controller');
 
 // Protected routes
@@ -26,6 +27,15 @@ router.post('/reactivate', userController.reactivateAccount);
 router.post('/upload', documentController.upload.single('file'), documentController.uploadFile);
 router.get('/med', documentController.getUserDocuments);
 router.delete('/doc/:docId', documentController.deleteDocument);
+
+//Connections routes:
+router.get('/connections', connectionController.getUserConnections);
+router.get('/connection/:connectionId', connectionController.getConnection);
+router.post('/connection', connectionController.sendConnectionRequest);
+router.delete('/connection/:connectionId', connectionController.cancelConnectionRequest);
+router.put('/connection/:connectionId', connectionController.acceptConnectionRequest);
+router.put('/connection/decline/:connectionId', connectionController.declineConnectionRequest);
+
 // router.post('/docusign/create-envelope', docusignController.createEnvelope);
 // router.get('/docusign/status/:envelopeId', docusignController.getStatus);
 // router.get('/docusign/download/:envelopeId', docusignController.downloadDocument);

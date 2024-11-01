@@ -1,8 +1,16 @@
 const mongoose = require('mongoose');
+const { v4: uuidv4 } = require('uuid');
 
 const connectionSchema = new mongoose.Schema({
-    sender: {type:String, ref:'User', required:true},
-    receiver: {type:String, ref:'User', required:true},
+    connectionId: {
+        type: String,
+        unique: true,
+        default: () => `con_${uuidv4()}`,
+        required: true,
+        immutable: true
+    },
+    senderId: {type:String, ref:'User', required:true},
+    receiverId: {type:String, ref:'User', required:true},
     status: {type:String, enum: ['pending', 'accepted', 'declined'], default:'pending'},
     
 }, {timestamps:true})
