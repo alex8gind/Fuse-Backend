@@ -25,7 +25,8 @@ const connectionService =  {
             throw new Error('Only pending connection requests can be cancelled');
         }
 
-        if (connection.senderId !== senderId) {
+        const isReceiver = connection.otherUser.userId === senderId;
+        if (isReceiver) {
             throw new Error('Not authorized to cancel this connection request');
         }
 
@@ -43,8 +44,18 @@ const connectionService =  {
     },
 
     getUserConnections: async (userId) => {
-        const connections = await connectionRepo.getUserConnections(userId);
-        return connections.filter(connection => connection != null);
+        try {
+            if (!userId) throw new Error('User ID is required');
+            
+            const connections = await connectionRepo.getUserConnections(userId);
+            if (!connections) return [];
+    
+            return connections.filter(conn => conn?.otherUser)
+
+        } catch (error) {
+            console.error('Error in getUserConnections service:', error);
+            throw error;
+        }
     },
 
     acceptConnectionRequest: async (receiverId, connectionId) => {
@@ -58,7 +69,8 @@ const connectionService =  {
             throw new Error('Only pending connection requests can be accepted');
         }
 
-        if (connection.receiverId !== receiverId) {
+        const isSender = connection.otherUser.userId !== receiverId;
+        if (isSender) {
             throw new Error('Not authorized to accept this connection request');
         }
 
@@ -78,7 +90,8 @@ const connectionService =  {
             throw new Error('Only pending connection requests can be declined');
         }
 
-        if (connection.receiverId !== receiverId) {
+        const isSender = connection.otherUser.userId !== receiverId;
+        if (isSender) {
             throw new Error('Not authorized to decline this connection request');
         }
 

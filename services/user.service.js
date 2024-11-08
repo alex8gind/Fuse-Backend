@@ -8,6 +8,10 @@ const userFunctions = {
         return await userRepo.createUser(userData);
     },
 
+    getUserByPId: async (pid) => {
+        return await userRepo.getUserByPId(pid);
+    },
+
     getUserProfile: async (userId) => {
         const user = await userRepo.getUserById(userId);
         if (!user) {

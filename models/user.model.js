@@ -4,14 +4,6 @@ const { getNextPId } = require('./counter');
 
 const userSchema = new mongoose.Schema({
 
-    userId: {
-        type: String,
-        unique: true,
-        default: () => `user_${uuidv4()}`,
-        required: true,
-        immutable: true
-    },
-
     PId: {
         type: String,
         unique: true,
@@ -77,12 +69,12 @@ const userSchema = new mongoose.Schema({
     },//
     
     profilePicture: { type: String, default: 'default.png' },
-    documents: [{ 
-        _id: { type: mongoose.Schema.Types.ObjectId, default: mongoose.Types.ObjectId },
-        documentType: String,
-        cloudinaryUrl: String,
-        uploadedAt: { type: Date, default: Date.now }
-    }],
+    // documents: [{ 
+    //     _id: { type: mongoose.Schema.Types.ObjectId, default: mongoose.Types.ObjectId },
+    //     documentType: String,
+    //     cloudinaryUrl: String,
+    //     uploadedAt: { type: Date, default: Date.now }
+    // }],
     isPhoneOrEmailVerified: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },

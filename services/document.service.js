@@ -46,7 +46,7 @@ const { createDocument, getDocumentById, getUserDocuments,deleteDocument, getVer
             throw new Error('Document not found');
         }
 
-        if (document.userId !== userId) {
+        if (document.userId !== userId.toString()) {
             throw new Error('You are not authorized to delete this document');
         }
         

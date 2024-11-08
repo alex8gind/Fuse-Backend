@@ -2,26 +2,101 @@ const Connection = require('../models/connection.model');
 
 const connectionRepo = {
     sendConnectionRequest: async (senderId, receiverId) => {
-        const newConnection = new Connection({
+        const newConnection = await new Connection({
             senderId,
             receiverId
-        });
-        return await newConnection.save();
+        }).save();
+
+        // Populate and transform to match other functions
+        const connection = await Connection.findById(newConnection._id)
+            .populate({
+                path: "senderId receiverId",
+                select: 'userId PId firstName lastName profilePicture isActive'
+            })
+            .exec();
+
+        const otherUser = connection.receiverId;  // In new connection, always show receiver as otherUser
+
+        return {
+            connectionId: connection.connectionId,
+            status: connection.status,
+            updatedAt: connection.updatedAt,
+            senderId: connection.senderId._id.toString(),
+            otherUser: {
+                userId: otherUser._id.toString(),
+                PId: otherUser.PId,
+                firstName: otherUser.firstName,
+                lastName: otherUser.lastName,
+                profilePicture: otherUser.profilePicture,
+                isActive: otherUser.isActive
+            }
+        };
     },
 
     cancelConnectionRequest: async (senderId, connectionId) => {
-        return await Connection.findOneAndDelete({ senderId, connectionId }).exec();
+        // First get the connection to return consistent format
+        const connection = await Connection.findOne({ senderId, connectionId })
+            .populate({
+                path: "senderId receiverId",
+                select: 'userId PId firstName lastName profilePicture isActive'
+            })
+            .exec();
+
+        if (!connection) return null;
+
+        // Delete the connection
+        await Connection.findOneAndDelete({ senderId, connectionId }).exec();
+
+        // Return the last state of connection in consistent format
+        const otherUser = connection.receiverId;
+
+        return {
+            connectionId: connection.connectionId,
+            status: connection.status,
+            updatedAt: connection.updatedAt,
+            senderId: connection.senderId._id.toString(),
+            otherUser: {
+                userId: otherUser._id.toString(),
+                PId: otherUser.PId,
+                firstName: otherUser.firstName,
+                lastName: otherUser.lastName,
+                profilePicture: otherUser.profilePicture,
+                isActive: otherUser.isActive
+            }
+        };
     },
 
-    getConnection: async (userId, connectionId) => {
-        return await Connection.findOne({ 
-            $or: [
-                { senderId: userId }, 
-                { receiverId: userId }
-                ],
-                 connectionId
-                }).exec();
-    },
+    // getConnection: async (userId, connectionId) => {
+    //     const connection = await Connection.findOne({ 
+    //         $or: [
+    //             { senderId: userId }, 
+    //             { receiverId: userId }
+    //             ],
+    //              connectionId
+    //             }) 
+    //             .populate({
+    //                 path: "senderId receiverId", 
+    //                 select :'userId PId firstName lastName profilePicture isActive'
+    //             })
+    //             .exec();
+
+    //             if (connection.senderId._id.toString() === userId.toString()) 
+    //                 return { 
+    //                     ...connection.toObject(), 
+    //                     otherUser: {
+    //                         ...connection.receiverId.toObject(), 
+    //                         userId: connection.receiverId._id.toString()
+    //                     }
+    //                 }
+    //             else if (connection.receiverId._id.toString() === userId.toString()) 
+    //                 return { 
+    //                     ...connection.toObject(), 
+    //                     otherUser: {
+    //                         ...connection.senderId.toObject(), 
+    //                         userId: connection.senderId._id.toString()
+    //                     }
+    //                 }
+    // },
 
     // getUserConnections: async (userId) => {
 
@@ -32,59 +107,155 @@ const connectionRepo = {
     //         ]
     //     })
     //     .populate({
-    //         path: function(){
-    //         if (userId === this.senderId) return 'receiverId';
-    //         else if (userId === this.receiverId) return 'senderId';
-    //         }, 
-    //         select: 'userId PId profilePicture firstName lastName'
-    //         })
-    //         .exec();
-    //         // modify receiverId and senderId to match other user key
-    //          return allConnections?.map((con) => {
-    //             if (con.senderId) return { ...con, otherUser: con.senderId}
-    //             else if (con.receiverId) return { ...con, otherUser: con.receiverId}
-    //          }) || [];
+    //         path: "senderId receiverId", 
+    //         select :'userId PId firstName lastName profilePicture'
+    //     })
+    //     .exec();
+        
+
+    //     const connections = allConnections?.map((con) => {
+    //         console.log("EXECUTED, 😱😱😱", con);
+    //         if (con.senderId._id.toString() === userId.toString()) return { ...con.toObject(), otherUser: {...con.receiverId.toObject(), userId: con.receiverId._id.toString()}}
+    //         else if (con.receiverId._id.toString() === userId.toString()) return { ...con.toObject(), otherUser: {...con.senderId.toObject(), userId: con.senderId._id.toString()}}
+    //     })
+    //     console.log("🔥🔥🔥", userId)
+    //     return connections || [];
     // }, 
 
-    getUserConnections: async (userId) => {
-        const allConnections = await Connection.find({ 
+    getConnection: async (userId, connectionId) => {
+        const connection = await Connection.findOne({ 
             $or: [
-                { senderId: userId },
+                { senderId: userId }, 
+                { receiverId: userId }
+            ],
+            connectionId
+        }) 
+        .populate({
+            path: "senderId receiverId", 
+            select: 'userId PId firstName lastName profilePicture isActive'
+        })
+        .exec();
+
+        if (!connection) return null;
+
+        const otherUser = connection.senderId._id.toString() === userId.toString()
+            ? connection.receiverId
+            : connection.senderId;
+
+        return {
+            connectionId: connection.connectionId,
+            status: connection.status,
+            updatedAt: connection.updatedAt,
+            senderId: connection.senderId._id.toString(),
+            otherUser: {
+                userId: otherUser._id.toString(),
+                PId: otherUser.PId,
+                firstName: otherUser.firstName,
+                lastName: otherUser.lastName,
+                profilePicture: otherUser.profilePicture,
+                isActive: otherUser.isActive
+            }
+        };
+    },
+
+    getUserConnections: async (userId) => {
+        const allConnections = await Connection.find({
+            $or: [
+                { senderId: userId }, 
                 { receiverId: userId }
             ]
         })
-        .populate('senderId', 'userId PId profilePicture firstName lastName')
-        .populate('receiverId', 'userId PId profilePicture firstName lastName')
+        .populate({
+            path: "senderId receiverId", 
+            select: 'userId PId firstName lastName profilePicture isActive'
+        })
         .exec();
 
-        return allConnections.map(conn => {
-            const otherUser = conn.senderId?._id.toString() === userId 
-                ? conn.receiverId 
-                : conn.senderId;
-            
+        return allConnections.map(connection => {
+            const otherUser = connection.senderId._id.toString() === userId.toString()
+                ? connection.receiverId
+                : connection.senderId;
+
             return {
-                ...conn.toObject(),
-                otherUser
+                connectionId: connection.connectionId,
+                status: connection.status,
+                updatedAt: connection.updatedAt,
+                senderId: connection.senderId._id.toString(),
+                otherUser: {
+                    userId: otherUser._id.toString(),
+                    PId: otherUser.PId,
+                    firstName: otherUser.firstName,
+                    lastName: otherUser.lastName,
+                    profilePicture: otherUser.profilePicture,
+                    isActive: otherUser.isActive
+                }
             };
         });
     },
 
     acceptConnectionRequest: async (receiverId, connectionId) => {
-        return await Connection.findOneAndUpdate(
+        const connection = await Connection.findOneAndUpdate(
             { connectionId, receiverId, status: 'pending' },
-            { status: 'accepted' }, 
+            { status: 'accepted' },
             { new: true }
-        ).exec();
+        )
+        .populate({
+            path: "senderId receiverId",
+            select: 'userId PId firstName lastName profilePicture isActive'
+        })
+        .exec();
+
+        if (!connection) return null;
+
+        const otherUser = connection.senderId;  // In accept, always show sender as otherUser
+
+        return {
+            connectionId: connection.connectionId,
+            status: connection.status,
+            updatedAt: connection.updatedAt,
+            senderId: connection.senderId._id.toString(),
+            otherUser: {
+                userId: otherUser._id.toString(),
+                PId: otherUser.PId,
+                firstName: otherUser.firstName,
+                lastName: otherUser.lastName,
+                profilePicture: otherUser.profilePicture,
+                isActive: otherUser.isActive
+            }
+        };
     },
 
     declineConnectionRequest: async (receiverId, connectionId) => {
-        return await Connection.findOneAndUpdate(
+        const connection = await Connection.findOneAndUpdate(
             { connectionId, receiverId, status: 'pending' },
-            { status: 'declined' }, 
+            { status: 'declined' },
             { new: true }
-        ).exec();
+        )
+        .populate({
+            path: "senderId receiverId",
+            select: 'userId PId firstName lastName profilePicture isActive'
+        })
+        .exec();
+
+        if (!connection) return null;
+
+        const otherUser = connection.senderId;  // In decline, always show sender as otherUser
+
+        return {
+            connectionId: connection.connectionId,
+            status: connection.status,
+            updatedAt: connection.updatedAt,
+            senderId: connection.senderId._id.toString(),
+            otherUser: {
+                userId: otherUser._id.toString(),
+                PId: otherUser.PId,
+                firstName: otherUser.firstName,
+                lastName: otherUser.lastName,
+                profilePicture: otherUser.profilePicture,
+                isActive: otherUser.isActive
+            }
+        };
     }
 };
-
 
 module.exports = connectionRepo;

@@ -19,6 +19,7 @@ router.use(isAccountVerifiedMiddleware);
 
 router.get('/profile', userController.getUserProfile);
 router.put('/profile', userController.editUser);
+router.get('/search/pid/:pid', userController.getUserByPId);
 router.post('/report/:reportedUserId', userController.reportUser);
 router.post('/block/:targetUserId', userController.blockUser);
 router.post('/unblock/:targetUserId', userController.unblockUser);
@@ -33,8 +34,8 @@ router.get('/connections', connectionController.getUserConnections);
 router.get('/connection/:connectionId', connectionController.getConnection);
 router.post('/connection', connectionController.sendConnectionRequest);
 router.delete('/connection/:connectionId', connectionController.cancelConnectionRequest);
-router.put('/connection/:connectionId', connectionController.acceptConnectionRequest);
-router.put('/connection/decline/:connectionId', connectionController.declineConnectionRequest);
+router.patch('/connection/:connectionId/accept', connectionController.acceptConnectionRequest);
+router.patch('/connection/:connectionId/decline', connectionController.declineConnectionRequest);
 
 // router.post('/docusign/create-envelope', docusignController.createEnvelope);
 // router.get('/docusign/status/:envelopeId', docusignController.getStatus);

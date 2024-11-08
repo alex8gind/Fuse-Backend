@@ -2,6 +2,25 @@ const userService = require('../services/user.service');
 
 const userController = {
 
+    getUserByPId: async (req, res, next) => {
+        try {
+            const { pid } = req.params;
+            const user = await userService.userFunctions.getUserByPId(pid);
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+            res.json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
     getUserProfile: async (req, res, next) => {
         try {
             const userId = req.user.userId; // Assuming the user ID is attached to the request by the auth middleware

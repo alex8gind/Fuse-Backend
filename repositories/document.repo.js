@@ -29,7 +29,6 @@ const documentRepo = {
     },
 
     deleteDocument: async (docId, userId) => {
-        console.log("🥶🥶🥶", docId, userId);
         const session = await mongoose.startSession();
         let deletedDocument = null;
 
@@ -56,7 +55,7 @@ const documentRepo = {
             if (document.documentType === 'photo') {
                 console.log("Deleting verification photo, updating user status");
                 const updateResult = await User.findOneAndUpdate(
-                    { userId: userId },
+                    { _id: userId},
                     { 
                         $set: { 
                             isVerified: false,

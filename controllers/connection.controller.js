@@ -133,9 +133,11 @@ const connectionController = {
                 data: connections
             });
         } catch (error) {
+            console.error('Error in getUserConnections:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to fetch connections'
+                message: 'Failed to fetch connections',
+                error: error.message
             });
         }
     },

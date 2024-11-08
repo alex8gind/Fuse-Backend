@@ -4,7 +4,7 @@ const authService = require('../services/auth.service');
 const authController = {
     register: async (req, res) => {
         try {
-            const { user, accessToken, refreshToken } = await authService.register(req.body);
+            const { user, accessToken } = await authService.register(req.body);
             res.status(201).json({
                 message: 'User registered successfully',
                 user: {
@@ -18,13 +18,12 @@ const authController = {
                     isAdmin: user.isAdmin,
                     isActive: user.isActive
                 },
-                accessToken,
-                refreshToken
+                accessToken
             });
         } catch (error) {
             console.error('Registration error in controller:', error);
             if (error.code === 11000) {
-                return res.status(409).json({ error: 'User already exists. Please use a different email or phone number.' });
+                return res.status(409).json({ error: 'User already exists. @@@@Please use a different email or phone number.' });
             }
             res.status(400).json({ error: error.message || 'An error occurred during registration' });
         }
@@ -95,6 +94,7 @@ const authController = {
 
     sendVerificationEmail: async (req, res) => {
         try {
+            console.log("EXECUTED");
             const { userId } = req.user;
             const result = await authService.requestEmailVerification(userId);
             res.status(200).json({ message: 'Verification email sent successfully' });

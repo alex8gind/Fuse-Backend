@@ -43,7 +43,7 @@ const generateTokens = (payload = {}, claims = {}, options = {}) => {
     } = options;
 
     const basePayload = {
-        userId: payload.userId,
+        userId: payload.userId || "🥶🥶🥶",
         type,
         nonce: Math.random().toString(36).substring(2), 
         role: claims.role || 'user',    
@@ -124,22 +124,30 @@ const authService = {
             const { password, ...otherUserData } = userData;
             validatePassword(password);
             validatePhoneOrEmail(otherUserData.phoneOrEmail);
+
             const hashedPassword = await hashPassword(password);
+
             const newUser = await userService.userFunctions.createUser({
                 ...otherUserData,
                 password: hashedPassword
             });
+
+            // Generate verification token:
             const { accessToken } = generateTokens(
                 {
                     userId: newUser.userId,  
                     phoneOrEmail: otherUserData.phoneOrEmail
                 },
-                {},
+                {
+                    role: 'user'
+                },
                 {
                     type: 'verification',  
                     atexp: "5m"
                 });
-            return { user: newUser, accessToken };
+            return { 
+                user: newUser, 
+                accessToken };
         } catch (error) {
             console.error('Registration error in service:', error);
             throw error;
@@ -197,6 +205,7 @@ const authService = {
             return { user, accessToken };
         } 
 
+        // Generate access and refresh tokens
         const { accessToken, refreshToken } = generateTokens({userId: user.userId}, 
             {
             role: user.isAdmin ? "admin" : "user"
@@ -379,6 +388,7 @@ const authService = {
                 refreshToken
             };
         } catch (error) {
+            console.error(error);
             if (error.name === 'TokenExpiredError') {
                 throw new Error('Verification token has expired');
             }

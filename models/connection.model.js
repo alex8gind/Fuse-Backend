@@ -9,9 +9,9 @@ const connectionSchema = new mongoose.Schema({
         required: true,
         immutable: true
     },
-    senderId: {type:String, ref:'User', required:true},
-    receiverId: {type:String, ref:'User', required:true},
-    status: {type:String, enum: ['pending', 'accepted', 'declined'], default:'pending'},
+    senderId: {type: String, ref: 'User', required: true},
+    receiverId: {type: String, ref: 'User', required: true},
+    status: {type: String, enum: ['pending', 'accepted', 'declined'], default:'pending'},
     
 }, {timestamps:true})
 

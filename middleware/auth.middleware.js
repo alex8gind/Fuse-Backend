@@ -9,6 +9,7 @@ const authMiddleware = async (req, res, next) => {
     
     console.log("ROUTE:", route);
     console.log("TOKEN:", token);
+
     if (!token) {
         return res.status(401).json({ error: 'Authentication failed', details: 'No token provided' });
     }
@@ -40,6 +41,7 @@ const authMiddleware = async (req, res, next) => {
                 default:
                     throw new Error('Invalid token type');
             }
+            
         } catch (decodeError) {
             console.error('Token decode error:', decodeError);
             return res.status(401).json({ error: 'Authentication failed', details: 'Invalid token format' });
@@ -55,10 +57,10 @@ const authMiddleware = async (req, res, next) => {
                 details: 'Invalid token type for this route' 
             });
         }
-
+        console.log("🥶🥶🥶", decoded);
         const user = await getUserById(decoded.userId);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'User not found 🥶🥶🥶' });
         }
   
         req.user = user;
