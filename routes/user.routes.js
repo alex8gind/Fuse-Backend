@@ -36,6 +36,11 @@ router.post('/connection', connectionController.sendConnectionRequest);
 router.delete('/connection/:connectionId', connectionController.cancelConnectionRequest);
 router.patch('/connection/:connectionId/accept', connectionController.acceptConnectionRequest);
 router.patch('/connection/:connectionId/decline', connectionController.declineConnectionRequest);
+router.post('/connection/:connectionId/share-documents', documentController.shareDocuments);
+router.get('/shared-documents', documentController.getSharedDocuments);
+router.patch('/documents/:docId/share-status', documentController.updateShareStatus);
+router.delete('/documents/:docId/share', documentController.revokeShare);
+router.get('/documents/:docId/view', documentController.viewDocument);
 
 // router.post('/docusign/create-envelope', docusignController.createEnvelope);
 // router.get('/docusign/status/:envelopeId', docusignController.getStatus);

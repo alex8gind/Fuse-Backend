@@ -1,14 +1,28 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
-const User = require('../models/user.model');
-const { addDocumentToUser, deleteDocument, getUserDocuments, getVerificationDocuments, uploadVerificationDocument } = require('../services/document.service');
+const { generateSignedUrl } = require('../utils/generateSignedUrl');
+const { 
+  addDocumentToUser, 
+  deleteDocument, 
+  getUserDocuments, 
+  getVerificationDocuments, 
+  uploadVerificationDocument,
+  shareDocuments,
+  getSharedDocuments,
+  viewDocument,
+  updateShareStatus,
+  revokeShare,
+  getDocumentById
+ } = require('../services/document.service');
+
 
 // Cloudinary configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
 });
 
 // Cloudinary storage configuration
@@ -64,9 +78,9 @@ const documentController = {
             error: error.message
         });
     }
-},
+  },
 
-getVerificationDocuments: async (req, res) => {
+  getVerificationDocuments: async (req, res) => {
     try {
       console.log('Getting documents for user:', req.user.userId);
         const documents = await getVerificationDocuments(req.user.userId);
@@ -81,7 +95,7 @@ getVerificationDocuments: async (req, res) => {
             error: error.message
         });
     }
-},
+  },
 
   uploadFile: async (req, res) => {
     if (!req.file) {
@@ -127,6 +141,186 @@ getVerificationDocuments: async (req, res) => {
     } catch (error) {
       console.error('Error deleting document:', error);
       res.status(500).json({ success: false, error: 'Error deleting document' });
+    }
+  },
+
+  shareDocuments: async (req, res) => {
+    try {
+        const { connectionId } = req.params;
+        const { documents, recipientId } = req.body;
+        const userId = req.user.userId;
+
+        console.log('Share request:', { 
+          userId,
+          connectionId,
+          documents,
+          recipientId
+      });
+
+      if (!connectionId) {
+        return res.status(400).json({
+            success: false,
+            error: 'Connection ID is required'
+        });
+    }
+
+    if (!recipientId) {
+        return res.status(400).json({
+            success: false,
+            error: 'Recipient ID is required'
+        });
+    }
+
+
+    if (!Array.isArray(documents) || documents.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide an array of document IDs to share'
+            });
+    }
+
+        const sharedDocs = await shareDocuments(
+            userId,
+            connectionId,
+            documents,
+            recipientId
+        );
+
+        res.status(200).json({
+            success: true,
+            data: sharedDocs
+        });
+    } catch (error) {
+        console.error('Share documents error:', error);
+        if (error.message.includes('Not authorized')) {
+          return res.status(403).json({
+              success: false,
+              error: error.message
+          });
+      }
+      
+      if (error.message.includes('Document not found')) {
+          return res.status(404).json({
+              success: false,
+              error: error.message
+          });
+      }
+
+      res.status(400).json({
+          success: false,
+          error: error.message || 'Failed to share documents'
+      });
+    }
+  },
+
+  getSharedDocuments: async (req, res) => {
+    try {
+        const documents = await getSharedDocuments(req.user.userId);
+        res.json({
+            success: true,
+            data: documents
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+  },
+
+  viewDocument: async (req, res) => {
+    try {
+        const { docId } = req.params;
+        const { connectionId } = req.query;
+        const userId = req.user.userId;
+
+        // Get document with permission check
+        const document = await viewDocument(
+            docId,
+            userId,
+            connectionId
+        );
+
+        // Generate signed URL for the document
+        const signedUrl = await generateSignedUrl(document);
+
+        res.json({
+            success: true,
+            url: signedUrl,
+            document: {
+                docId: document.docId,
+                docName: document.docName,
+                fileType: document.fileType,
+                documentType: document.documentType
+            }
+        });
+
+    } catch (error) {
+        console.error('View document error:', error);
+        
+        // Handle specific error cases
+        if (error.message === 'Document not found') {
+            return res.status(404).json({
+                success: false,
+                error: 'Document not found'
+            });
+        }
+        
+        if (error.message === 'Not authorized to access this document') {
+            return res.status(403).json({
+                success: false,
+                error: 'Not authorized to access this document'
+            });
+        }
+
+        if (error.message === 'Unsupported file type') {
+            return res.status(400).json({
+                success: false,
+                error: 'Unsupported file type'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            error: 'Failed to retrieve document'
+        });
+    }
+  },
+
+  updateShareStatus: async (req, res) => {
+    try {
+        const { docId } = req.params;
+        const { status } = req.body;
+        const userId = req.user.userId;
+
+        const updatedDoc = await updateShareStatus(docId, userId, status);
+        res.json({
+            success: true,
+            data: updatedDoc
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+  },
+
+  revokeShare: async (req, res) => {
+    try {
+        const { docId } = req.params;
+        const userId = req.user.userId;
+
+        const updatedDoc = await revokeShare(docId, userId);
+        res.json({
+            success: true,
+            data: updatedDoc
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
     }
   }
 };

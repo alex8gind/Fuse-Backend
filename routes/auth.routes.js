@@ -9,6 +9,7 @@ const { verificationDocMiddleware } = require('../middleware/verificationDocMidd
 // Public routes
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/login-google', authController.googleLogin);
 router.post('/verify-email/:token', authController.verifyEmail);//triggered by user clicking on sent email link
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/validate-reset-token', authController.validateResetToken);

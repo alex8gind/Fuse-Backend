@@ -20,7 +20,10 @@ const documentRepo = {
 
     getDocumentById: async (docId) => {
         console.log("🥶🥶🥶", docId);
-        return await Document.findOne({docId}).exec();
+        return await Document.findOne({docId})
+        .select('docId docName url userId sharedWith documentType fileType createdAt updatedAt')
+        .lean() 
+        .exec();
     },
 
     getUserDocuments: async (userId) => {
@@ -87,6 +90,96 @@ const documentRepo = {
             // End the session
                 await session.endSession();
             }
+    },
+
+    shareDocuments: async (docId, shareData) => {
+        if (!shareData.userId || !shareData.connectionId) {
+            throw new Error('Missing required share data fields');
+        }
+
+        return await Document.findOneAndUpdate(
+            { docId },
+            { 
+                $push: { 
+                    sharedWith: {
+                        userId: shareData.userId,
+                        connectionId: shareData.connectionId,
+                        status: shareData.status || 'pending'
+                }   
+             } 
+            },
+            { new: true }
+        ).exec();
+    },
+
+    getSharedDocuments: async (userId, connectionId) => {
+        const query = { 'sharedWith.userId': userId };
+        if (connectionId) {
+            query['sharedWith.connectionId'] = connectionId;
+        }
+
+         return await Document.find(query)
+        .select('docId docName url sharedWith documentType fileType')
+        .exec();
+    },
+
+    viewDocument: async (docId, userId, connectionId = null) => {
+        const query = { docId };
+        const pipeline = [
+            { $match: query },
+            { 
+                $project: {
+                    docId: 1,
+                    docName: 1,
+                    url: 1,
+                    userId: 1,
+                    fileType: 1,
+                    sharedWith: {
+                        $filter: {
+                            input: "$sharedWith",
+                            as: "share",
+                            cond: {
+                                $and: [
+                                    { $eq: ["$$share.userId", userId] },
+                                    connectionId ? { $eq: ["$$share.connectionId", connectionId] } : {},
+                                    { $in: ["$$share.status", ["pending", "accepted"]] },
+                                    { $gt: ["$$share.expiresAt", new Date()] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        ];
+
+        const [document] = await Document.aggregate(pipeline).exec();
+        return document;
+    },
+
+    updateShareStatus: async (docId, userId, status) => {
+        return await Document.findOneAndUpdate(
+            { 
+                docId,
+                'sharedWith.userId': userId
+            },
+            { 
+                $set: { 'sharedWith.$.status': status }
+            },
+            { new: true }
+        ).exec();
+    },
+
+    revokeShare: async (docId, userId) => {
+        return await Document.findOneAndUpdate(
+            { 
+                docId,
+                'sharedWith.userId': userId
+            },
+            { 
+                $set: { 'sharedWith.$.status': 'revoked' }
+            },
+            { new: true }
+        ).exec();
     }
 
 };

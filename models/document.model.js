@@ -2,19 +2,19 @@ const mongoose = require('mongoose')
 const { v4: uuidv4 } = require('uuid')
 
 const documentSchema = new mongoose.Schema({
-    docName: { 
-        type: String, 
-        required: true 
-    },
+  docName: { 
+    type: String, 
+    required: true 
+  },
   docId: {
     type: String,
     unique: true,
     default: () => `doc_${uuidv4()}`,
     required: true
-},
+  },
   fileType: { 
     type: String, 
-    enum: ['jpg', 'png', 'pdf', 'jpeg', 'doc', 'docx'],
+    enum: ['pdf', 'jpg', 'jpeg', 'png'],
     required: true 
   },
   documentType: { 
@@ -34,7 +34,33 @@ const documentSchema = new mongoose.Schema({
     type: String, 
     ref: 'User', 
     required: true 
-  }
+  },
+  sharedWith: { 
+    type: [{
+        userId: { 
+          type: String, 
+          ref: 'User'
+        },
+        connectionId: {
+          type: String,
+          ref: 'Connection'
+        },
+        status: {
+          type: String,
+          enum: ['pending', 'accepted', 'rejected', 'revoked'],
+          default: 'pending'
+        },
+        sharedAt: {
+          type: Date,
+          default: Date.now
+        },
+        expiresAt: {
+          type: Date,
+          default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+        }
+  }],
+  default: [] 
+}   
 
 }, { timestamps: true });
 
