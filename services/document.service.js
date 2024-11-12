@@ -13,6 +13,7 @@ const {
   shareDocuments,
   viewDocument
  } = require('../repositories/document.repo');
+const { generateSignedUrl } = require('../utils/generateSignedUrl');
 
 const documentService = {
 
@@ -79,15 +80,20 @@ const documentService = {
             }
 
              // Convert IDs to strings for comparison
-             if (document.userId.toString() !== userId.toString()) {
-              throw new Error(`Not authorized to share document ${docId}`);
-          }
+             const documentOwnerId = document.userId.toString ? document.userId.toString() : document.userId;
+             const requestingUserId = userId.toString ? userId.toString() : userId;
+
+             if (documentOwnerId !== requestingUserId) {
+                console.log('Authorization failed - IDs do not match');
+                throw new Error(`Not authorized to share document ${docId}`);
+              }
 
              // Check if already shared with this user
-             const isAlreadyShared = document.sharedWith?.some(
-              share => share.userId.toString() === recipientId.toString() && 
-              ['pending', 'accepted'].includes(share.status)
-          );
+             const isAlreadyShared = document.sharedWith?.some(share => {
+                const sharedUserId = share.userId.toString ? share.userId.toString() : share.userId;
+                return sharedUserId === recipientId.toString() && 
+                       ['pending', 'accepted'].includes(share.status);
+              });
 
             if (isAlreadyShared) {
                 continue;
@@ -97,7 +103,8 @@ const documentService = {
             const sharedDoc = await shareDocuments(docId, {
                 userId: recipientId,
                 connectionId,
-                status: 'pending'
+                status: 'pending',
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) 
             });
 
             results.push(sharedDoc);
@@ -109,22 +116,32 @@ const documentService = {
     }
   },
 
-  getSharedDocuments: async (userId) => {
+  getSharedDocuments: async (connectionId) => {
     try {
-        if (!userId) {
-            throw new Error('User ID is required');
+        if (!connectionId) {
+            throw new Error('Connection ID is required');
         }
-        const documents = await getSharedDocuments(userId);
+        const documents = await getSharedDocuments(connectionId);
         
-        // Filter out expired shares
-        return documents.filter(doc => {
-            const activeShares = doc.sharedWith.filter(share => 
-                share.userId.toString() === userId.toString() &&
-                ['pending', 'accepted'].includes(share.status) &&
-                new Date(share.expiresAt) > new Date()
-            );
-            return activeShares.length > 0;
-        });
+        // const transformedDocuments = documents.map(doc => {
+        //     const userShare = doc.sharedWith.find(share => 
+        //       share.userId === userId
+        //     );
+        //     return {
+        //         docId: doc.docId,
+        //         docName: doc.docName,
+        //         documentType: doc.documentType,
+        //         fileType: doc.fileType,
+        //         url: doc.url,
+        //         sharedAt: userShare?.sharedAt,
+        //         status: userShare?.status,
+        //         expiresAt: userShare?.expiresAt,
+        //         connectionId: userShare?.connectionId,
+        //         sharedWith: userShare
+        //       }
+        // });
+
+        return documents;
     } catch (error) {
         console.error('Error fetching shared documents:', error);
         throw error;
@@ -133,19 +150,53 @@ const documentService = {
 
   viewDocument: async (docId, userId, connectionId = null) => {
     try {
-        const document = await viewDocument(docId, userId, connectionId);
+        console.log('ViewDocument Service - Input:', { docId, userId, connectionId });
+       
+        // Get the document with full details
+        const document = await getDocumentById(docId);
+        console.log('ViewDocument Service - Document found:', {
+            docId: document.docId,
+            userId: document.userId,
+            sharedWith: document.sharedWith
+          });
         
         if (!document) {
-            throw new Error('Document not found');
+          throw new Error('Document not found');
         }
-
+    
         // Check access permissions
         const isOwner = document.userId === userId;
-        const isShared = document.sharedWith?.length > 0;
+        console.log('ViewDocument Service - Is Owner:', isOwner);
 
-        if (!isOwner && !isShared) {
-            throw new Error('Not authorized to access this document');
-        }
+         // Check share access
+        const shareRecord = document.sharedWith?.find(share => 
+        share.userId === userId && 
+        share.connectionId === connectionId
+      );
+
+      console.log('ViewDocument Service - Access Check:', {
+        isOwner,
+        shareFound: !!shareRecord,
+        shareStatus: shareRecord?.status,
+        expiresAt: shareRecord?.expiresAt
+      });
+  
+      
+    // Validate access
+    // if (!isOwner) {
+    //     if (!shareRecord) {
+    //       throw new Error('Document not shared with user');
+    //     }
+  
+    //     if (shareRecord.status !== 'accepted') {
+    //       throw new Error('Share request is pending acceptance');
+    //     }
+  
+    //     if (new Date(shareRecord.expiresAt) <= new Date()) {
+    //       throw new Error('Share access has expired');
+    //     }
+    //   }
+    
 
         // Validate supported file types
         const supportedTypes = ['pdf', 'jpg', 'jpeg', 'png'];
@@ -153,10 +204,24 @@ const documentService = {
             throw new Error('Unsupported file type');
         }
 
-        return document;
-    } catch (error) {
-        console.error('Error getting document for viewing:', error);
-        throw error;
+        // Generate signed URL
+        const signedUrl = await generateSignedUrl(document);
+
+        return {
+            success: true,
+            url: signedUrl,
+            document: {
+              docId: document.docId,
+              docName: document.docName,
+              fileType: document.fileType,
+              documentType: document.documentType,
+              shareStatus: shareRecord?.status
+            }
+          };
+      
+        } catch (error) {
+            console.error('ViewDocument Service - Error:', error);
+            throw error;
     }
   },
 

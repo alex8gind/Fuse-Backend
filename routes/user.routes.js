@@ -37,7 +37,7 @@ router.delete('/connection/:connectionId', connectionController.cancelConnection
 router.patch('/connection/:connectionId/accept', connectionController.acceptConnectionRequest);
 router.patch('/connection/:connectionId/decline', connectionController.declineConnectionRequest);
 router.post('/connection/:connectionId/share-documents', documentController.shareDocuments);
-router.get('/shared-documents', documentController.getSharedDocuments);
+router.get('/connection/:connectionId/shared-documents', documentController.getSharedDocuments);
 router.patch('/documents/:docId/share-status', documentController.updateShareStatus);
 router.delete('/documents/:docId/share', documentController.revokeShare);
 router.get('/documents/:docId/view', documentController.viewDocument);

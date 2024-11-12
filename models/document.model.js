@@ -39,16 +39,18 @@ const documentSchema = new mongoose.Schema({
     type: [{
         userId: { 
           type: String, 
-          ref: 'User'
+          ref: 'User',
+          required: true
         },
         connectionId: {
           type: String,
-          ref: 'Connection'
+          ref: 'Connection',
+          required: true
         },
         status: {
           type: String,
-          enum: ['pending', 'accepted', 'rejected', 'revoked'],
-          default: 'pending'
+          enum: ['accepted', 'revoked'],
+          default: 'accepted'
         },
         sharedAt: {
           type: Date,

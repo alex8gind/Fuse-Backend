@@ -2,6 +2,24 @@ const User = require('../models/user.model');
 const Token = require('../models/token.model');
 
 const authRepo = {
+    saveGoogleUser: async (userData) => {
+        const user = new User({
+            ...userData,
+            authMethod: 'google',
+            isPhoneOrEmailVerified: true, // Google accounts come pre-verified
+            isOnboardingComplete: false
+        });
+        const result = await user.save();
+        
+         // Exclude sensitive data
+        const { password, verificationToken, resetPasswordToken, ...safeUser } = result.toObject();
+        return {
+            ...safeUser,
+            userId: result._id
+        };
+    },
+      
+
     getUserById: async (userId) => {
         const result =  await User.findOne({ _id: userId })
         .select('-verificationToken -resetPasswordExpires -loginAttempts -lockUntil -password')

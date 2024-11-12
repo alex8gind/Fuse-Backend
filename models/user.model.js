@@ -33,6 +33,10 @@ const userSchema = new mongoose.Schema({
         required: [true, 'Date of birth is required'],
         validate: {
             validator: function(value) {
+                if (this.authMethod === 'google' && !this.isOnboardingComplete) {
+                    return true;
+                }
+
                 const today = new Date();
                 const birthDate = new Date(value);
                 let age = today.getFullYear() - birthDate.getFullYear();
@@ -52,7 +56,9 @@ const userSchema = new mongoose.Schema({
             values: ['male', 'female', 'other'],
             message: '{VALUE} is not a valid gender'
         },
-        required: [true, 'Gender is required']
+        required: [function() {
+            return !(this.authMethod === 'google' && !this.isOnboardingComplete);
+        }, 'Gender is required']
     },
 
     phoneOrEmail: {
@@ -65,16 +71,27 @@ const userSchema = new mongoose.Schema({
    
     password: { 
         type: String, 
-        required: [true, 'Password is required']
-    },//
+        required: [function() {
+            return this.authMethod !== 'google';
+        }, 'Password is required']
+    },
+
+    authMethod: {
+        type: String,
+        enum: ['local', 'google'],
+        default: 'local'
+    },
+    isOnboardingComplete: {
+        type: Boolean,
+        default: false
+    },
+    googleId: {
+        type: String,
+        sparse: true,
+        unique: true
+    },
     
     profilePicture: { type: String, default: 'default.png' },
-    // documents: [{ 
-    //     _id: { type: mongoose.Schema.Types.ObjectId, default: mongoose.Types.ObjectId },
-    //     documentType: String,
-    //     cloudinaryUrl: String,
-    //     uploadedAt: { type: Date, default: Date.now }
-    // }],
     isPhoneOrEmailVerified: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     isAdmin: { type: Boolean, default: false },

@@ -5,19 +5,9 @@ const userService = require('./user.service');
 const { sendWithPhoneOrEmail } = require('./phoneOrEmail.service');
 const jwt = require('jsonwebtoken');
 const { MAX_LOGIN_ATTEMPTS, LOCK_TIME } = require('../config/constants');
-
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const generateVerificationToken = () => uuidv4();
-// console.log('ACCESS_TOKEN_SECRET:', process.env.ACCESS_TOKEN_SECRET);
-// console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET);
-
-// const generateTokens = (userId, claims = {role: "user"}, atexp = "15m", rtexp = "7d") => {
-//     if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
-//         throw new Error('Token secrets are not set in environment variables');
-//     }
-//     const accessToken = jwt.sign({ userId, ...claims }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: atexp });
-//     const refreshToken = jwt.sign({ userId, ...claims }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: rtexp });
-//     return { accessToken, refreshToken };
-// };
 
 const getTokenSecret = (type) => {
     const secretMap = {
@@ -221,6 +211,72 @@ const authService = {
             accessToken, 
             refreshToken 
         };
+    },
+
+    googleLogin: async (token) => {
+        try {
+            // Verify Google token
+            const ticket = await client.verifyIdToken({
+              idToken: token,
+              audience: process.env.GOOGLE_CLIENT_ID
+            });
+
+            const { email, name, picture } = ticket.getPayload();
+            
+            // Check if user exists
+            let user = await authRepo.getUserByPhoneOrEmail(email);
+            let isNewUser = false;
+
+            if (!user) {
+                // Create minimal user profile for new Google users
+                const [firstName, ...lastNameParts] = name.split(' ');
+                const lastName = lastNameParts.join(' ');
+              
+              const newUserData = {
+                firstName,
+                lastName,
+                phoneOrEmail: email,
+                profilePicture:picture,
+                password: Math.random().toString(36) + Math.random().toString(36), // Random password for Google users
+                authMethod: 'google',
+                isPhoneOrEmailVerified: true
+              };
+              
+              user = await authRepo.saveGoogleUser(newUserData);
+              isNewUser = true
+            }
+            
+            // Generate tokens
+            const { accessToken, refreshToken } = generateTokens(
+              { userId: user.userId },
+              { role: user.isAdmin ? 'admin' : 'user' },
+              { type: 'standard' }
+            );
+            
+            // Save refresh token
+            await authRepo.saveRefreshToken(user.userId, refreshToken);
+            
+            return {
+                user: {
+                    userId: user.userId,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    phoneOrEmail: user.phoneOrEmail,
+                    isVerified: user.isVerified,
+                    isAdmin: user.isAdmin,
+                    isActive: user.isActive,
+                    profilePicture: user.profilePicture,
+                    authMethod: user.authMethod,
+                    isOnboardingComplete: user.isOnboardingComplete
+                  },
+              accessToken,
+              refreshToken,
+              isNewUser
+            };
+          } catch (error) {
+            console.error('Google authentication error:', error);
+            throw new Error('Authentication failed');
+          }
     },
 
     changePhoneOrEmail: async (userId, oldPhoneOrEmail, newPhoneOrEmail) => {

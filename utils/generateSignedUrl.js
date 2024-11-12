@@ -1,6 +1,5 @@
 const cloudinary = require('cloudinary').v2;
 
-// utils/generateSignedUrl.js
 
 const generateSignedUrl = async (document) => {
   if (!document?.url) {

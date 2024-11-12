@@ -215,7 +215,7 @@ const documentController = {
 
   getSharedDocuments: async (req, res) => {
     try {
-        const documents = await getSharedDocuments(req.user.userId);
+        const documents = await getSharedDocuments(req.params.connectionId);
         res.json({
             success: true,
             data: documents
@@ -223,7 +223,7 @@ const documentController = {
     } catch (error) {
         res.status(500).json({
             success: false,
-            error: error.message
+            error: error.message || 'Failed to fetch shared documents'
         });
     }
   },
@@ -234,56 +234,52 @@ const documentController = {
         const { connectionId } = req.query;
         const userId = req.user.userId;
 
-        // Get document with permission check
-        const document = await viewDocument(
-            docId,
-            userId,
-            connectionId
-        );
+         // Validation
+        if (!docId) {
+          return res.status(400).json({
+            success: false,
+            error: 'Document ID is required'
+          });
+        }
 
-        // Generate signed URL for the document
-        const signedUrl = await generateSignedUrl(document);
-
-        res.json({
-            success: true,
-            url: signedUrl,
-            document: {
-                docId: document.docId,
-                docName: document.docName,
-                fileType: document.fileType,
-                documentType: document.documentType
-            }
+        console.log('View Document Controller - Request:', {
+          docId,
+          connectionId,
+          userId
         });
-
+    
+      const result = await viewDocument(docId, userId, connectionId);
+      
+      res.json(result);
     } catch (error) {
-        console.error('View document error:', error);
+      console.error('View Document Controller - Error:', error.message);
         
-        // Handle specific error cases
-        if (error.message === 'Document not found') {
-            return res.status(404).json({
-                success: false,
-                error: 'Document not found'
-            });
-        }
+      switch(error.message) {
+        case 'Document not found':
+          return res.status(404).json({
+            success: false,
+            error: 'Document not found'
+          });
         
-        if (error.message === 'Not authorized to access this document') {
-            return res.status(403).json({
-                success: false,
-                error: 'Not authorized to access this document'
-            });
-        }
-
-        if (error.message === 'Unsupported file type') {
-            return res.status(400).json({
-                success: false,
-                error: 'Unsupported file type'
-            });
-        }
-
-        res.status(500).json({
+        case 'Document not shared with user':
+        case 'Share request is pending acceptance':
+          return res.status(403).json({
+            success: false,
+            error: error.message
+          });
+        
+        case 'Share access has expired':
+          return res.status(401).json({
+            success: false,
+            error: error.message
+          });
+        
+        default:
+          return res.status(500).json({
             success: false,
             error: 'Failed to retrieve document'
-        });
+          });
+      }
     }
   },
 

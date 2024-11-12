@@ -16,7 +16,7 @@ const connectionService =  {
 
     cancelConnectionRequest: async (senderId, connectionId) => {
         const connection = await connectionRepo.getConnection(senderId, connectionId);
-        
+        console.log("🌊🌊🌊", senderId, connectionId, connection)
         if (!connection) {
             throw new Error('Connection request not found');
         }

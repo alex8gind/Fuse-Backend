@@ -61,6 +61,30 @@ const authController = {
         }
     },
 
+    googleLogin: async (req, res) => {
+        try {
+            const { token } = req.body;
+            if (!token) {
+              return res.status(400).json({ error: 'Google token is required' });
+            }
+            
+            const result = await authService.googleLogin(token);
+            
+            res.json({
+                message: result.isNewUser ? 'Account created with Google' : 'Logged in with Google',
+                user: result.user,
+                accessToken: result.accessToken,
+                refreshToken: result.refreshToken,
+                isNewUser: result.isNewUser
+              });
+          } catch (error) {
+            console.error('Google login error:', error);
+            res.status(401).json({
+              error: error.message || 'Authentication failed'
+            });
+          }
+    },
+
     logout: async (req, res, next) => {
         try {
             const { userId } = req.user;

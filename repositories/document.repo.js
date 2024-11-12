@@ -18,13 +18,13 @@ const documentRepo = {
         return savedDocument;
     },
 
-    getDocumentById: async (docId) => {
-        console.log("🥶🥶🥶", docId);
-        return await Document.findOne({docId})
-        .select('docId docName url userId sharedWith documentType fileType createdAt updatedAt')
-        .lean() 
-        .exec();
-    },
+    // getDocumentById: async (docId) => {
+    //     // console.log("🥶🥶🥶", docId);
+    //     return await Document.findOne({docId})
+    //     .select('docId docName url userId sharedWith documentType fileType createdAt updatedAt')
+    //     .lean() 
+    //     .exec();
+    // },
 
     getUserDocuments: async (userId) => {
         const documents = await Document.find({ userId }).exec();
@@ -112,47 +112,39 @@ const documentRepo = {
         ).exec();
     },
 
-    getSharedDocuments: async (userId, connectionId) => {
-        const query = { 'sharedWith.userId': userId };
-        if (connectionId) {
-            query['sharedWith.connectionId'] = connectionId;
-        }
-
-         return await Document.find(query)
-        .select('docId docName url sharedWith documentType fileType')
+    getSharedDocuments: async ( connectionId) => {
+        const filter = { 
+            'sharedWith.connectionId': connectionId,
+            'sharedWith.status': 'accepted',
+            'sharedWith.expiresAt': { $gt: new Date() }
+        };
+    
+         const result =  await Document.find(filter)
+        .populate('sharedWith.userId', '-password') 
         .exec();
+
+        console.log("Shared documents found:👜👜👜", result, connectionId);
+        return result
     },
 
-    viewDocument: async (docId, userId, connectionId = null) => {
-        const query = { docId };
-        const pipeline = [
-            { $match: query },
-            { 
-                $project: {
-                    docId: 1,
-                    docName: 1,
-                    url: 1,
-                    userId: 1,
-                    fileType: 1,
-                    sharedWith: {
-                        $filter: {
-                            input: "$sharedWith",
-                            as: "share",
-                            cond: {
-                                $and: [
-                                    { $eq: ["$$share.userId", userId] },
-                                    connectionId ? { $eq: ["$$share.connectionId", connectionId] } : {},
-                                    { $in: ["$$share.status", ["pending", "accepted"]] },
-                                    { $gt: ["$$share.expiresAt", new Date()] }
-                                ]
-                            }
-                        }
-                    }
-                }
-            }
-        ];
+    getDocumentById: async (docId) => {
+        console.log("Fetching document:", docId);
 
-        const [document] = await Document.aggregate(pipeline).exec();
+        const document = await Document.findOne({ docId })
+        .select('docId docName url userId sharedWith documentType fileType createdAt updatedAt')
+        // .populate('userId', 'firstName lastName') // Get user details
+        // .populate('sharedWith.userId', 'firstName lastName') // Get shared users' details
+        // .populate('sharedWith.connectionId', 'status') // Get connection status
+        .lean()
+        .exec();
+
+        console.log("Repository - Document found:", {
+            exists: !!document,
+            docId: document?.docId,
+            userId: document?.userId,
+            sharedCount: document?.sharedWith?.length || 0
+          });
+      
         return document;
     },
 

@@ -57,7 +57,7 @@ const authMiddleware = async (req, res, next) => {
                 details: 'Invalid token type for this route' 
             });
         }
-        console.log("🥶🥶🥶", decoded);
+        // console.log("🥶🥶🥶", decoded);
         const user = await getUserById(decoded.userId);
         if (!user) {
             return res.status(404).json({ error: 'User not found 🥶🥶🥶' });

@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const cors = require('cors');
-require('newrelic');
+// require('newrelic');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/error.middleware');
 const winston = require('winston')
