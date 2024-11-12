@@ -216,6 +216,7 @@ const documentController = {
   getSharedDocuments: async (req, res) => {
     try {
         const documents = await getSharedDocuments(req.params.connectionId);
+        console.log('Shared documents:', documents, req.params.connectionId);
         res.json({
             success: true,
             data: documents
@@ -226,6 +227,7 @@ const documentController = {
             error: error.message || 'Failed to fetch shared documents'
         });
     }
+  
   },
 
   viewDocument: async (req, res) => {

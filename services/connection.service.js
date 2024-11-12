@@ -58,29 +58,43 @@ const connectionService =  {
         }
     },
 
-    acceptConnectionRequest: async (receiverId, connectionId) => {
-        const connection = await connectionRepo.getConnection(receiverId, connectionId);
-        
-        if (!connection) {
-            throw new Error('Connection request not found');
+    acceptConnectionRequest: async (userId, connectionId) => {
+        try {
+            // First verify the connection exists and user has permission to accept it
+            const existingConnection = await connectionRepo.getConnection(userId, connectionId);
+            
+            // if (!existingConnection) {
+            //     throw new Error('Connection request not found');
+            // }
+            // console.log("🙈🙈🙈", userId, existingConnection.otherUser.userId, existingConnection)
+            // // Check if user is the receiver of the connection request
+            // if (existingConnection.otherUser.userId.toString() !== userId.toString()) {
+            //     throw new Error('Not authorized to accept this connection request');
+            // }
+    
+            // Check if connection is in pending status
+            if (existingConnection.status !== 'pending') {
+                throw new Error('Only pending connection requests can be accepted');
+            }
+    
+            // Accept the connection
+            const updatedConnection = await connectionRepo.acceptConnection(userId, connectionId);
+            
+            if (!updatedConnection) {
+                throw new Error('Failed to accept connection request');
+            }
+    
+            // Return the updated connection data
+            return updatedConnection
+    
+        } catch (error) {
+            console.error('Error in acceptConnectionRequest service:', error);
+            throw error; // Re-throw to be handled by controller
         }
-
-        if (connection.status !== 'pending') {
-            throw new Error('Only pending connection requests can be accepted');
-        }
-
-        const isSender = connection.otherUser.userId !== receiverId;
-        if (isSender) {
-            throw new Error('Not authorized to accept this connection request');
-        }
-
-        const updatedConnection = await connectionRepo.acceptConnectionRequest(receiverId, connectionId);
-        
-        return updatedConnection;
     },
 
-    declineConnectionRequest: async (receiverId, connectionId) => {
-        const connection = await connectionRepo.getConnection(receiverId, connectionId);
+    declineConnectionRequest: async (userId, connectionId) => {
+        const connection = await connectionRepo.getConnection(userId, connectionId);
         
         if (!connection) {
             throw new Error('Connection request not found');
@@ -90,12 +104,12 @@ const connectionService =  {
             throw new Error('Only pending connection requests can be declined');
         }
 
-        const isSender = connection.otherUser.userId !== receiverId;
+        const isSender = connection.senderId.toString() === userId.toString();
         if (isSender) {
             throw new Error('Not authorized to decline this connection request');
         }
 
-        const updatedConnection = await connectionRepo.declineConnectionRequest(receiverId, connectionId);
+        const updatedConnection = await connectionRepo.declineConnectionRequest(userId, connectionId);
         
         return updatedConnection;
     }

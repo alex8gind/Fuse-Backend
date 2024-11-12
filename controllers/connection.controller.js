@@ -145,43 +145,47 @@ const connectionController = {
     acceptConnectionRequest: async (req, res) => {
         try {
             const { connectionId } = req.params;
-            const receiverId = req.user.userId;
-
+            const userId = req.user.userId;
+    
             if (!connectionId) {
                 return res.status(400).json({
                     success: false,
                     message: 'Connection ID is required'
                 });
             }
-
-            const connection = await connectionService.acceptConnectionRequest(receiverId, connectionId);
+    
+            const connection = await connectionService.acceptConnectionRequest(userId, connectionId);
             
             return res.status(200).json({
                 success: true,
                 data: connection
             });
         } catch (error) {
+            console.error('Error accepting connection request:', error);
+            
+            // Handle specific error cases with appropriate status codes
             if (error.message.includes('Connection request not found')) {
                 return res.status(404).json({
                     success: false,
                     message: error.message
                 });
             }
-
+    
             if (error.message.includes('Not authorized')) {
                 return res.status(403).json({
                     success: false,
                     message: error.message
                 });
             }
-
+    
             if (error.message.includes('Only pending connection requests')) {
                 return res.status(400).json({
                     success: false,
                     message: error.message
                 });
             }
-
+    
+            // Default error response for unexpected errors
             return res.status(500).json({
                 success: false,
                 message: 'Failed to accept connection request'
@@ -192,7 +196,7 @@ const connectionController = {
     declineConnectionRequest: async (req, res) => {
         try {
             const { connectionId } = req.params;
-            const receiverId = req.user.userId;
+            const userId = req.user.userId;
 
             if (!connectionId) {
                 return res.status(400).json({
@@ -201,7 +205,7 @@ const connectionController = {
                 });
             }
 
-            const connection = await connectionService.declineConnectionRequest(receiverId, connectionId);
+            const connection = await connectionService.declineConnectionRequest(userId, connectionId);
             
             return res.status(200).json({
                 success: true,

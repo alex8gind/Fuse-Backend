@@ -193,27 +193,50 @@ const connectionRepo = {
         });
     },
 
-    acceptConnectionRequest: async (receiverId, connectionId) => {
-        const connection = await Connection.findOneAndUpdate(
-            { connectionId, receiverId, status: 'pending' },
-            { status: 'accepted' },
-            { new: true }
+    acceptConnection: async (userId, connectionId) => {
+        // First find the connection to verify the user is the receiver
+        const connection = await Connection.findOne({ 
+            connectionId,
+            status: 'pending'
+        });
+    
+        if (!connection) {
+            throw new Error('Connection request not found');
+        }
+    
+        // Verify the user attempting to accept is the receiver
+        if (connection.receiverId.toString() !== userId.toString()) {
+            throw new Error('Not authorized to accept this connection request');
+        }
+    
+        // Update the connection status
+        const updatedConnection = await Connection.findOneAndUpdate(
+            { 
+                connectionId,
+                status: 'pending'
+            },
+            { 
+                status: 'accepted'
+            },
+            { 
+                new: true,
+                runValidators: true
+            }
         )
         .populate({
             path: "senderId receiverId",
             select: 'userId PId firstName lastName profilePicture isActive'
         })
         .exec();
-
-        if (!connection) return null;
-
-        const otherUser = connection.senderId;  // In accept, always show sender as otherUser
-
+    
+        // Transform and return data
+        const otherUser = updatedConnection.senderId; // sender becomes the otherUser
+    
         return {
-            connectionId: connection.connectionId,
-            status: connection.status,
-            updatedAt: connection.updatedAt,
-            senderId: connection.senderId._id.toString(),
+            connectionId: updatedConnection.connectionId,
+            status: updatedConnection.status,
+            updatedAt: updatedConnection.updatedAt,
+            senderId: updatedConnection.senderId._id.toString(),
             otherUser: {
                 userId: otherUser._id.toString(),
                 PId: otherUser.PId,

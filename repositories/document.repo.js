@@ -115,7 +115,6 @@ const documentRepo = {
     getSharedDocuments: async ( connectionId) => {
         const filter = { 
             'sharedWith.connectionId': connectionId,
-            'sharedWith.status': 'accepted',
             'sharedWith.expiresAt': { $gt: new Date() }
         };
     
