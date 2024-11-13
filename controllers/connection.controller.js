@@ -1,4 +1,5 @@
 const connectionService = require('../services/connection.service');
+const { sendNotification } = require('../utils/notification');
 
 
 const connectionController = {
@@ -7,7 +8,7 @@ const connectionController = {
         try {
             const { receiverId } = req.body;
             const senderId = req.user.userId; 
-            const io = req.app.get('io');
+            // const io = req.app.get('io');
 
             if (!receiverId) {
                 return res.status(400).json({
@@ -16,8 +17,10 @@ const connectionController = {
                 });
             }
 
-            const connection = await connectionService.sendConnectionRequest(senderId, receiverId, io);
+            const connection = await connectionService.sendConnectionRequest(senderId, receiverId);
             
+            await sendNotification(req.user.userId, receiverId, 'sentRequest');
+
             return res.status(201).json({
                 success: true,
                 data: connection
@@ -147,7 +150,7 @@ const connectionController = {
         try {
             const { connectionId } = req.params;
             const userId = req.user.userId;
-            const io = req.app.get('io');
+            // const io = req.app.get('io');
     
             if (!connectionId) {
                 return res.status(400).json({
@@ -158,6 +161,8 @@ const connectionController = {
     
             const connection = await connectionService.acceptConnectionRequest(userId, connectionId, io);
             
+            await sendNotification(req.user.userId, connection.senderId, 'acceptedRequest');
+
             return res.status(200).json({
                 success: true,
                 data: connection

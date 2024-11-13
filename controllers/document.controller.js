@@ -15,6 +15,7 @@ const {
   revokeShare,
   getDocumentById
  } = require('../services/document.service');
+const { sendNotification } = require('../utils/notification');
 
 
 // Cloudinary configuration
@@ -149,7 +150,7 @@ const documentController = {
         const { connectionId } = req.params;
         const { documents, recipientId } = req.body;
         const userId = req.user.userId;
-        const io = req.app.get('io');
+        // const io = req.app.get('io');
 
         console.log('Share request:', { 
           userId,
@@ -184,9 +185,10 @@ const documentController = {
             userId,
             connectionId,
             documents,
-            recipientId,
-            io
+            recipientId
         );
+
+        await sendNotification(userId, recipientId, 'sharedDocument');
 
         res.status(200).json({
             success: true,

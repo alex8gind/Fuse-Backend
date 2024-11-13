@@ -18,22 +18,24 @@ const connectionService =  {
         }
         
         // Emit notification to receiver with sender's details
-        if (io) {
-            io.of('/notifications').to(receiverId).emit('connection_request', {
-                type: 'connection_request',
-                senderId: senderId,
-                connectionId: existingConnection.connectionId,
-                data: {
-                    name: `${sender.firstName} ${sender.lastName}`,
-                    profilePicture: sender.profilePicture,
-                    PId: sender.PId,
-                    isActive: sender.isActive
-                },
-                createdAt: new Date()
-            });
-        }
-        return await connectionRepo.sendConnectionRequest(senderId, receiverId)
-    
+        // if (io) {
+        //     io.of('/notifications').to(receiverId).emit('connection_request', {
+        //         type: 'connection_request',
+        //         senderId: senderId,
+        //         connectionId: existingConnection.connectionId,
+        //         data: {
+        //             name: `${sender.firstName} ${sender.lastName}`,
+        //             profilePicture: sender.profilePicture,
+        //             PId: sender.PId,
+        //             isActive: sender.isActive
+        //         },
+        //         createdAt: new Date()
+        //     });
+        // }
+        const result = await connectionRepo.sendConnectionRequest(senderId, receiverId)
+
+        return result
+
     },
 
     cancelConnectionRequest: async (senderId, connectionId) => {
@@ -80,7 +82,7 @@ const connectionService =  {
         }
     },
 
-    acceptConnectionRequest: async (userId, connectionId, io) => {
+    acceptConnectionRequest: async (userId, connectionId) => {
         try {
             // First verify the connection exists and user has permission to accept it
             const existingConnection = await connectionRepo.getConnection(userId, connectionId);
@@ -98,18 +100,18 @@ const connectionService =  {
             }
 
             // Notify the original sender that their request was accepted
-            if (io) {
-                io.of('/notifications').to(updatedConnection.senderId).emit('connection_accepted', {
-                    type: 'connection_accepted',
-                    data: {
-                        name: `${updatedConnection.otherUser.firstName} ${updatedConnection.otherUser.lastName}`,
-                        profilePicture: updatedConnection.otherUser.profilePicture,
-                        PId: updatedConnection.otherUser.PId,
-                    },
-                    connectionId: connectionId,
-                    createdAt: new Date()
-                });
-            }
+            // if (io) {
+            //     io.of('/notifications').to(updatedConnection.senderId).emit('connection_accepted', {
+            //         type: 'connection_accepted',
+            //         data: {
+            //             name: `${updatedConnection.otherUser.firstName} ${updatedConnection.otherUser.lastName}`,
+            //             profilePicture: updatedConnection.otherUser.profilePicture,
+            //             PId: updatedConnection.otherUser.PId,
+            //         },
+            //         connectionId: connectionId,
+            //         createdAt: new Date()
+            //     });
+            // }
     
             // Return the updated connection data
             return updatedConnection

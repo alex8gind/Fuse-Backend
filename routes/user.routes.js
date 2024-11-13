@@ -7,6 +7,7 @@ const isAdmin = require('../middleware/isAdmin.middleware');
 const {isAccountVerifiedMiddleware} = require('../middleware/verified.middleware');
 const documentController = require('../controllers/document.controller');
 const connectionController = require('../controllers/connection.controller');
+const { getNotifications, markNotificationsAsRead } = require('../utils/notification');
 // const docusignController = require('../controllers/docusign.controller');
 
 // Protected routes
@@ -41,6 +42,9 @@ router.get('/connection/:connectionId/shared-documents', documentController.getS
 router.patch('/documents/:docId/share-status', documentController.updateShareStatus);
 router.delete('/documents/:docId/share', documentController.revokeShare);
 router.get('/documents/:docId/view', documentController.viewDocument);
+router.get('/notifications', getNotifications);
+router.put('/notifications', markNotificationsAsRead);
+
 
 // router.post('/docusign/create-envelope', docusignController.createEnvelope);
 // router.get('/docusign/status/:envelopeId', docusignController.getStatus);
