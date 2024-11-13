@@ -1,6 +1,6 @@
 const cloudinary = require('cloudinary').v2;
 const User = require('../models/user.model');
-const { getUserById } = require('../repositories/user.repo');
+const userRepo = require('../repositories/user.repo');
 const { 
   createDocument, 
   getDocumentById, 
@@ -10,8 +10,7 @@ const {
   getSharedDocuments,
   updateShareStatus,
   revokeShare,
-  shareDocuments,
-  viewDocument
+  shareDocuments
  } = require('../repositories/document.repo');
 const { generateSignedUrl } = require('../utils/generateSignedUrl');
 
@@ -69,7 +68,7 @@ const documentService = {
         return document;
   },
 
-  shareDocuments: async (userId, connectionId, documentIds, recipientId) => {
+  shareDocuments: async (userId, connectionId, documentIds, recipientId, io) => {
     try {
         const results = [];
         for (const docId of documentIds) {
@@ -109,6 +108,37 @@ const documentService = {
 
             results.push(sharedDoc);
         }
+
+        const sender = await userRepo.getUserById(userId);
+        if (!sender) {
+            throw new Error('Sender user not found');
+        }
+        
+        // Emit notification to receiver with sender's details
+        if (io) {
+          try {
+            io.of('/notifications').to(recipientId).emit('document_shared', {
+                  type: 'document_shared',
+                  senderId: userId,
+                  connectionId: connectionId, 
+                  documents: results.map(doc => ({  
+                      docId: doc.docId,
+                      documentName: doc.docName, 
+                      documentType: doc.documentType
+                  })),
+                  data: {
+                    senderName: `${sender.firstName} ${sender.lastName}`,
+                    senderPicture: sender.profilePicture,
+                    PId: sender.PId,
+                    isActive: sender.isActive
+                  },
+                  createdAt: new Date()
+              });
+              console.log('Document share notification sent successfully');
+      } catch (error) {
+        console.error('Error sending document share notification:', error);
+        }
+      }
         return results;
     } catch (error) {
         console.error('Error sharing documents:', error);

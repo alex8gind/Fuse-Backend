@@ -5,7 +5,9 @@ const cors = require('cors');
 // require('newrelic');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/error.middleware');
+const { initializeSocket } = require('./socketServer');
 const winston = require('winston')
+
 process.on('uncaughtException', (err) => {
   console.error('There was an uncaught exception', err);
   process.exit(1);
@@ -34,7 +36,6 @@ const logger = winston.createLogger({
     new winston.transports.File({ filename: 'app.log' })
   ]
 });
-
 
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.url}`);
@@ -89,11 +90,17 @@ app.use(errorHandler);
 
 
 // Server:
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-
+const PORT = process.env.PORT || 5001;
+const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Initialize socket.io
+const { io, notificationsNamespace } = initializeSocket(server);
+
+// Make io available both globally and through app
+app.set('io', io);
+app.set('notificationsNamespace', notificationsNamespace);
 
 
 

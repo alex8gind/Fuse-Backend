@@ -149,6 +149,7 @@ const documentController = {
         const { connectionId } = req.params;
         const { documents, recipientId } = req.body;
         const userId = req.user.userId;
+        const io = req.app.get('io');
 
         console.log('Share request:', { 
           userId,
@@ -183,7 +184,8 @@ const documentController = {
             userId,
             connectionId,
             documents,
-            recipientId
+            recipientId,
+            io
         );
 
         res.status(200).json({

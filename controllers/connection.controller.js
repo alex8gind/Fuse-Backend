@@ -7,6 +7,7 @@ const connectionController = {
         try {
             const { receiverId } = req.body;
             const senderId = req.user.userId; 
+            const io = req.app.get('io');
 
             if (!receiverId) {
                 return res.status(400).json({
@@ -15,7 +16,7 @@ const connectionController = {
                 });
             }
 
-            const connection = await connectionService.sendConnectionRequest(senderId, receiverId);
+            const connection = await connectionService.sendConnectionRequest(senderId, receiverId, io);
             
             return res.status(201).json({
                 success: true,
@@ -146,6 +147,7 @@ const connectionController = {
         try {
             const { connectionId } = req.params;
             const userId = req.user.userId;
+            const io = req.app.get('io');
     
             if (!connectionId) {
                 return res.status(400).json({
@@ -154,7 +156,7 @@ const connectionController = {
                 });
             }
     
-            const connection = await connectionService.acceptConnectionRequest(userId, connectionId);
+            const connection = await connectionService.acceptConnectionRequest(userId, connectionId, io);
             
             return res.status(200).json({
                 success: true,
@@ -197,6 +199,7 @@ const connectionController = {
         try {
             const { connectionId } = req.params;
             const userId = req.user.userId;
+            const io = req.app.get('io');
 
             if (!connectionId) {
                 return res.status(400).json({
@@ -205,7 +208,7 @@ const connectionController = {
                 });
             }
 
-            const connection = await connectionService.declineConnectionRequest(userId, connectionId);
+            const connection = await connectionService.declineConnectionRequest(userId, connectionId, io);
             
             return res.status(200).json({
                 success: true,
